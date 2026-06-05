@@ -57,10 +57,10 @@ function updateKeywordConfig(keyword, patch = {}) {
   if (!state.keywords.includes(kw)) return null;
   const prev = state.keywordConfigs[kw] || defaultConfig();
   state.keywordConfigs[kw] = {
-    channels: patch.channels ? normalizeChannels(patch.channels) : prev.channels,
+    channels: Object.prototype.hasOwnProperty.call(patch, 'channels') ? normalizeChannels(patch.channels) : prev.channels,
     caseSensitive: typeof patch.caseSensitive === 'boolean' ? patch.caseSensitive : prev.caseSensitive,
     showBlacklisted: typeof patch.showBlacklisted === 'boolean' ? patch.showBlacklisted : prev.showBlacklisted,
-    guildId: patch.guildId || prev.guildId || null
+    guildId: Object.prototype.hasOwnProperty.call(patch, 'guildId') ? (patch.guildId || null) : (prev.guildId || null)
   };
   return state.keywordConfigs[kw];
 }
@@ -85,30 +85,48 @@ function setBlacklistForKeyword(keyword, user, blocked) {
 
 function registerGuild(guild) {
   if (!guild?.id) return null;
-  if (!state.guilds[guild.id]) {
-    state.guilds[guild.id] = {
-      id: guild.id,
-      name: guild.name || 'Unknown Guild',
-      channels: {}
-    };
+
+  const id = String(guild.id);
+  const name = String(guild.name || 'Unknown Guild');
+
+  if (!state.guilds[id]) {
+    state.guilds[id] = { id, name, channels: {} };
+  } else if (state.guilds[id].name !== name) {
+    state.guilds[id].name = name;
   }
-  return state.guilds[guild.id];
+
+  return state.guilds[id];
 }
 
 function registerChannel(channelId, channelName, guild = null) {
   const id = String(channelId || '').trim();
   if (!id) return null;
 
-  // Register guild if provided
+  const name = String(channelName || 'unknown');
+  let changed = false;
+  let registeredGuild = null;
+
   if (guild) {
-    registerGuild(guild);
-    if (state.guilds[guild.id]) {
-      state.guilds[guild.id].channels[id] = { id, name: String(channelName || 'unknown') };
+    const guildId = String(guild.id);
+    const previousGuild = state.guilds[guildId];
+    const previousGuildName = previousGuild?.name;
+    registeredGuild = registerGuild(guild);
+    if (!previousGuild || previousGuildName !== registeredGuild.name) changed = true;
+
+    const previousGuildChannel = registeredGuild.channels[id];
+    if (!previousGuildChannel || previousGuildChannel.name !== name) {
+      registeredGuild.channels[id] = { id, name };
+      changed = true;
     }
   }
 
-  state.channelsSeen[id] = { id, name: String(channelName || 'unknown') };
-  return state.channelsSeen[id];
+  const previousChannel = state.channelsSeen[id];
+  if (!previousChannel || previousChannel.name !== name) {
+    state.channelsSeen[id] = { id, name };
+    changed = true;
+  }
+
+  return { guild: registeredGuild, channel: state.channelsSeen[id], changed };
 }
 
 function keywordHit(content, lower, kw, caseSensitive) {
@@ -135,10 +153,12 @@ function keywordHit(content, lower, kw, caseSensitive) {
   });
 }
 
-function getMatchingKeywords(content, channelId, authorId) {
+function getMatchingKeywords(content, channelId, authorId, guildId) {
   const lower = content.toLowerCase();
+  const messageGuildId = guildId ? String(guildId) : null;
   return state.keywords.filter((kw) => {
     const cfg = state.keywordConfigs[kw] || defaultConfig();
+    if (cfg.guildId && String(cfg.guildId) !== messageGuildId) return false;
     const hit = keywordHit(content, lower, kw, cfg.caseSensitive);
     if (!hit) return false;
     if (cfg.channels.length > 0 && !cfg.channels.includes(channelId)) return false;

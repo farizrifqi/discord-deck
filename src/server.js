@@ -83,7 +83,7 @@ function messageToPayload(message) {
   const authorId = message.author.id;
   const guild = message.guild;
 
-  const matchedKeywords = getMatchingKeywords(content, channelId, authorId);
+  const matchedKeywords = getMatchingKeywords(content, channelId, authorId, guild.id);
   if (!matchedKeywords.length) return null;
 
   return {
@@ -154,20 +154,34 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Start Discord (no longer requires single guild)
-startDiscord({
-  token: DISCORD_TOKEN,
-  onStatus: (s) => {
-    state.status = s.status;
-    state.tag = s.tag || '';
-    broadcast({ type: 'status', ...s });
-  },
-  onMatchedMessage: (message) => {
-    const payload = messageToPayload(message);
-    if (payload) {
-      state.lastDiscordMessageAt = Date.now();
-      payload.keywords.forEach((kw) => pushMessageForKeyword(kw, payload));
-      broadcast(payload);
+if (!DISCORD_TOKEN) {
+  state.status = 'missing_token';
+  console.warn('[discord] DISCORD_TOKEN is missing; Discord client not started.');
+} else {
+  // Start Discord (no longer requires single guild)
+  startDiscord({
+    token: DISCORD_TOKEN,
+    onStatus: (s) => {
+      state.status = s.status;
+      state.tag = s.tag || '';
+      broadcast({ type: 'status', ...s });
+    },
+    onChannelSeen: ({ guild, channel }) => {
+      broadcast({
+        type: 'channel_seen',
+        guild,
+        channel,
+        guilds: state.guilds,
+        channelsSeen: Object.values(state.channelsSeen)
+      });
+    },
+    onMatchedMessage: (message) => {
+      const payload = messageToPayload(message);
+      if (payload) {
+        state.lastDiscordMessageAt = Date.now();
+        payload.keywords.forEach((kw) => pushMessageForKeyword(kw, payload));
+        broadcast(payload);
+      }
     }
-  }
-});
+  });
+}

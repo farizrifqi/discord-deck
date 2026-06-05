@@ -1,7 +1,7 @@
 const { Client } = require('discord.js-selfbot-v13');
-const { registerGuild, registerChannel } = require('./state');
+const { registerChannel } = require('./state');
 
-function startDiscord({ token, onStatus, onMatchedMessage }) {
+function startDiscord({ token, onStatus, onMatchedMessage, onChannelSeen }) {
   const client = new Client({ checkUpdate: false });
 
   client.on('ready', async () => {
@@ -13,8 +13,8 @@ function startDiscord({ token, onStatus, onMatchedMessage }) {
     if (!message?.guild || message.author?.id === client.user?.id) return;
 
     // Dynamically register guild + channel from incoming messages
-    registerGuild(message.guild);
-    registerChannel(message.channel.id, message.channel.name, message.guild);
+    const seen = registerChannel(message.channel.id, message.channel.name, message.guild);
+    if (seen?.changed) onChannelSeen?.(seen);
 
     onMatchedMessage?.(message);
   });
