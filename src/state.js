@@ -35,11 +35,52 @@ function setInitialKeywords(list = []) {
   state.blacklistByKeyword = {};
   state.keywords.forEach((kw) => ensureKeyword(kw));
 }
-function addKeyword(keyword, channels = []) { const kw = normalizeKeyword(keyword); if (!kw || state.keywords.includes(kw)) return null; state.keywords.push(kw); ensureKeyword(kw); state.keywordConfigs[kw] = defaultConfig(channels); return kw; }
-function updateKeywordConfig(keyword, patch = {}) { const kw = normalizeKeyword(keyword); if (!state.keywords.includes(kw)) return null; const prev = state.keywordConfigs[kw] || defaultConfig(); state.keywordConfigs[kw] = { channels: patch.channels ? normalizeChannels(patch.channels) : prev.channels, caseSensitive: typeof patch.caseSensitive === 'boolean' ? patch.caseSensitive : prev.caseSensitive, showBlacklisted: typeof patch.showBlacklisted === 'boolean' ? patch.showBlacklisted : prev.showBlacklisted }; return state.keywordConfigs[kw]; }
-function removeKeyword(keyword) { const kw = normalizeKeyword(keyword); if (!state.keywords.includes(kw)) return null; state.keywords = state.keywords.filter((k) => k !== kw); delete state.columns[kw]; delete state.keywordConfigs[kw]; delete state.blacklistByKeyword[kw]; return kw; }
-function setBlacklistForKeyword(keyword, user, blocked) { const kw = normalizeKeyword(keyword); if (!user?.id || !state.keywords.includes(kw)) return; ensureKeyword(kw); if (blocked) state.blacklistByKeyword[kw][user.id] = user; else delete state.blacklistByKeyword[kw][user.id]; }
-function registerChannel(channelId, channelName) { const id = String(channelId || '').trim(); if (!id) return null; state.channelsSeen[id] = { id, name: String(channelName || 'unknown') }; return state.channelsSeen[id]; }
+
+function addKeyword(keyword, channels = []) {
+  const kw = normalizeKeyword(keyword);
+  if (!kw || state.keywords.includes(kw)) return null;
+  state.keywords.push(kw);
+  ensureKeyword(kw);
+  state.keywordConfigs[kw] = defaultConfig(channels);
+  return kw;
+}
+
+function updateKeywordConfig(keyword, patch = {}) {
+  const kw = normalizeKeyword(keyword);
+  if (!state.keywords.includes(kw)) return null;
+  const prev = state.keywordConfigs[kw] || defaultConfig();
+  state.keywordConfigs[kw] = {
+    channels: patch.channels ? normalizeChannels(patch.channels) : prev.channels,
+    caseSensitive: typeof patch.caseSensitive === 'boolean' ? patch.caseSensitive : prev.caseSensitive,
+    showBlacklisted: typeof patch.showBlacklisted === 'boolean' ? patch.showBlacklisted : prev.showBlacklisted
+  };
+  return state.keywordConfigs[kw];
+}
+
+function removeKeyword(keyword) {
+  const kw = normalizeKeyword(keyword);
+  if (!state.keywords.includes(kw)) return null;
+  state.keywords = state.keywords.filter((k) => k !== kw);
+  delete state.columns[kw];
+  delete state.keywordConfigs[kw];
+  delete state.blacklistByKeyword[kw];
+  return kw;
+}
+
+function setBlacklistForKeyword(keyword, user, blocked) {
+  const kw = normalizeKeyword(keyword);
+  if (!user?.id || !state.keywords.includes(kw)) return;
+  ensureKeyword(kw);
+  if (blocked) state.blacklistByKeyword[kw][user.id] = user;
+  else delete state.blacklistByKeyword[kw][user.id];
+}
+
+function registerChannel(channelId, channelName) {
+  const id = String(channelId || '').trim();
+  if (!id) return null;
+  state.channelsSeen[id] = { id, name: String(channelName || 'unknown') };
+  return state.channelsSeen[id];
+}
 
 function keywordHit(content, lower, kw, caseSensitive) {
   const raw = String(kw || '').trim();
@@ -50,16 +91,21 @@ function keywordHit(content, lower, kw, caseSensitive) {
   if (isQuoted) {
     const phrase = raw.slice(1, -1).trim();
     if (!phrase) return false;
-    return caseSensitive ? content.includes(phrase) : lower.includes(phrase.toLowerCase());
+    const phraseLower = phrase.toLowerCase();
+    return caseSensitive ? content.includes(phrase) : lower.includes(phraseLower);
   }
 
-  // Unquoted multi-word => AND mode (all tokens must exist), e.g. offer car => offer AND car
+  // Unquoted multi-word => AND mode (all tokens must exist)
   const tokens = raw.split(/\s+/).filter(Boolean);
   if (tokens.length === 1) {
-    return caseSensitive ? content.includes(tokens[0]) : lower.includes(tokens[0].toLowerCase());
+    const tokenLower = tokens[0].toLowerCase();
+    return caseSensitive ? content.includes(tokens[0]) : lower.includes(tokenLower);
   }
 
-  return tokens.every((t) => (caseSensitive ? content.includes(t) : lower.includes(t.toLowerCase())));
+  return tokens.every((t) => {
+    const tLower = t.toLowerCase();
+    return caseSensitive ? content.includes(t) : lower.includes(tLower);
+  });
 }
 
 function getMatchingKeywords(content, channelId, authorId) {
@@ -74,7 +120,11 @@ function getMatchingKeywords(content, channelId, authorId) {
   });
 }
 
-function pushMessageForKeyword(keyword, msg) { if (!state.columns[keyword]) state.columns[keyword] = []; state.columns[keyword].unshift(msg); while (state.columns[keyword].length > MAX_PER_KEYWORD) state.columns[keyword].pop(); }
+function pushMessageForKeyword(keyword, msg) {
+  if (!state.columns[keyword]) state.columns[keyword] = [];
+  state.columns[keyword].unshift(msg);
+  while (state.columns[keyword].length > MAX_PER_KEYWORD) state.columns[keyword].pop();
+}
 
 function hydratePersistent(p = {}) {
   setInitialKeywords(Array.isArray(p.keywords) ? p.keywords : []);
