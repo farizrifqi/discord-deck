@@ -1,3 +1,5 @@
+# ⚠️ 100% AI Generated
+
 # DiscordDeck 🎯
 
 A **TweetDeck-style** real-time Discord message monitor. Each keyword gets its own column. Messages matching keywords stream in live via WebSocket.
