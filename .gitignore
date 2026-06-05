@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+.pnp*
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+
+# Build/Coverage output
+dist/
+build/
+coverage/
+.next/
+.cache/

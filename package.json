@@ -1,0 +1,44 @@
+{
+  "name": "discord-filtermessage",
+  "version": "1.0.0",
+  "description": "TweetDeck-style real-time Discord keyword monitor",
+  "main": "electron-main.js",
+  "type": "commonjs",
+  "author": {
+    "name": "zeraneL"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "app": "electron .",
+    "build:win": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.17.0",
+    "discord.js-selfbot-v13": "^3.6.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3",
+    "nodemon": "^3.1.4",
+    "electron": "^31.7.7"
+  },
+  "build": {
+    "appId": "com.discorddeck.app",
+    "productName": "DiscordDeck",
+    "files": [
+      "index.html",
+      "src/**/*",
+      "electron-main.js",
+      "package.json",
+      ".env",
+      ".env.example",
+      "data/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
