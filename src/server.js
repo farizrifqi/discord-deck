@@ -145,6 +145,12 @@ wss.on('connection', (ws) => {
       savePersisted();
       return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword });
     }
+
+    if (data.type === 'unblacklist_user') {
+      setBlacklistForKeyword(data.keyword || '', data.user, false);
+      savePersisted();
+      return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword });
+    }
   });
 });
 
