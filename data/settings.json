@@ -1,0 +1,116 @@
+{
+  "keywords": [
+    "divine",
+    "sov",
+    "diablo",
+    "seas",
+    "invi",
+    "twisted",
+    "echo",
+    "cosmic",
+    "exalt",
+    "malev",
+    "purr",
+    "cobalt"
+  ],
+  "keywordConfigs": {
+    "divine": {
+      "channels": [
+        "1427082653990916206",
+        "1431726676437504212",
+        "1431727859080364243"
+      ],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "sov": {
+      "channels": [
+        "1427082653990916206",
+        "1431726676437504212",
+        "1431727859080364243"
+      ],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "diablo": {
+      "channels": [],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "seas": {
+      "channels": [],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "invi": {
+      "channels": [
+        "1427082653990916206",
+        "1431726676437504212",
+        "1431727859080364243"
+      ],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "twisted": {
+      "channels": [
+        "1427082653990916206",
+        "1431727859080364243",
+        "1431726676437504212"
+      ],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "echo": {
+      "channels": [],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "cosmic": {
+      "channels": [
+        "1427082653990916206",
+        "1431726676437504212",
+        "1431727859080364243"
+      ],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "exalt": {
+      "channels": [],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "malev": {
+      "channels": [
+        "1427082653990916206",
+        "1431726676437504212",
+        "1431727859080364243"
+      ],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "purr": {
+      "channels": [],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    },
+    "cobalt": {
+      "channels": [],
+      "caseSensitive": false,
+      "showBlacklisted": false
+    }
+  },
+  "blacklistByKeyword": {
+    "divine": {},
+    "sov": {},
+    "diablo": {},
+    "seas": {},
+    "invi": {},
+    "twisted": {},
+    "echo": {},
+    "cosmic": {},
+    "exalt": {},
+    "malev": {},
+    "purr": {},
+    "cobalt": {}
+  }
+}

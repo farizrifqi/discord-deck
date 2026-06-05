@@ -27,3 +27,17 @@
 - Update this file + web-coding-agent.md when adding new features.
 
 Last updated: 2026-06-06 (post-initial commit)
+
+
+## Multi-Guild Support (June 2026)
+- Guilds and channels are now discovered dynamically from incoming messages (no longer from .env)
+- Frontend should select guild first, then channels from that guild
+- state.guilds contains the live guild + channel cache
+
+
+
+## Frontend Guild Selection (TODO)
+- index.html needs guild dropdown before channel selection when adding keywords
+- Use window.guilds from init
+- When sending add_keyword, include guildId + filtered channels
+

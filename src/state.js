@@ -4,8 +4,9 @@ const state = {
   keywords: [],
   keywordConfigs: {},
   columns: {},
+  guilds: {},                    // { [guildId]: { id, name, channels: { [channelId]: {id, name} } } }
   channelsSeen: {},
-  blacklistByKeyword: {}, // { [keyword]: { [userId]: user } }
+  blacklistByKeyword: {},
   status: 'connecting',
   tag: '',
   lastDiscordMessageAt: 0,
@@ -13,14 +14,19 @@ const state = {
 
 function normalizeKeyword(keyword = '') {
   let k = String(keyword || '').trim().toLowerCase();
-  // normalize over-escaped surrounding quotes: \"abc\" -> "abc"
   if (k.startsWith('\\"') && k.endsWith('\\"') && k.length >= 4) {
     k = `"${k.slice(2, -2)}"`;
   }
   return k;
 }
-function normalizeChannels(channels) { return Array.isArray(channels) ? [...new Set(channels.map((c) => String(c).trim()).filter(Boolean))] : []; }
-function defaultConfig(channels = []) { return { channels: normalizeChannels(channels), caseSensitive: false, showBlacklisted: false }; }
+
+function normalizeChannels(channels) {
+  return Array.isArray(channels) ? [...new Set(channels.map((c) => String(c).trim()).filter(Boolean))] : [];
+}
+
+function defaultConfig(channels = []) {
+  return { channels: normalizeChannels(channels), caseSensitive: false, showBlacklisted: false, guildId: null };
+}
 
 function ensureKeyword(kw) {
   if (!state.columns[kw]) state.columns[kw] = [];
@@ -36,12 +42,13 @@ function setInitialKeywords(list = []) {
   state.keywords.forEach((kw) => ensureKeyword(kw));
 }
 
-function addKeyword(keyword, channels = []) {
+function addKeyword(keyword, channels = [], guildId = null) {
   const kw = normalizeKeyword(keyword);
   if (!kw || state.keywords.includes(kw)) return null;
   state.keywords.push(kw);
   ensureKeyword(kw);
   state.keywordConfigs[kw] = defaultConfig(channels);
+  if (guildId) state.keywordConfigs[kw].guildId = guildId;
   return kw;
 }
 
@@ -52,7 +59,8 @@ function updateKeywordConfig(keyword, patch = {}) {
   state.keywordConfigs[kw] = {
     channels: patch.channels ? normalizeChannels(patch.channels) : prev.channels,
     caseSensitive: typeof patch.caseSensitive === 'boolean' ? patch.caseSensitive : prev.caseSensitive,
-    showBlacklisted: typeof patch.showBlacklisted === 'boolean' ? patch.showBlacklisted : prev.showBlacklisted
+    showBlacklisted: typeof patch.showBlacklisted === 'boolean' ? patch.showBlacklisted : prev.showBlacklisted,
+    guildId: patch.guildId || prev.guildId || null
   };
   return state.keywordConfigs[kw];
 }
@@ -75,9 +83,30 @@ function setBlacklistForKeyword(keyword, user, blocked) {
   else delete state.blacklistByKeyword[kw][user.id];
 }
 
-function registerChannel(channelId, channelName) {
+function registerGuild(guild) {
+  if (!guild?.id) return null;
+  if (!state.guilds[guild.id]) {
+    state.guilds[guild.id] = {
+      id: guild.id,
+      name: guild.name || 'Unknown Guild',
+      channels: {}
+    };
+  }
+  return state.guilds[guild.id];
+}
+
+function registerChannel(channelId, channelName, guild = null) {
   const id = String(channelId || '').trim();
   if (!id) return null;
+
+  // Register guild if provided
+  if (guild) {
+    registerGuild(guild);
+    if (state.guilds[guild.id]) {
+      state.guilds[guild.id].channels[id] = { id, name: String(channelName || 'unknown') };
+    }
+  }
+
   state.channelsSeen[id] = { id, name: String(channelName || 'unknown') };
   return state.channelsSeen[id];
 }
@@ -86,7 +115,6 @@ function keywordHit(content, lower, kw, caseSensitive) {
   const raw = String(kw || '').trim();
   if (!raw) return false;
 
-  // Quoted keyword => exact phrase mode, e.g. "offer car"
   const isQuoted = raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"');
   if (isQuoted) {
     const phrase = raw.slice(1, -1).trim();
@@ -95,7 +123,6 @@ function keywordHit(content, lower, kw, caseSensitive) {
     return caseSensitive ? content.includes(phrase) : lower.includes(phraseLower);
   }
 
-  // Unquoted multi-word => AND mode (all tokens must exist)
   const tokens = raw.split(/\s+/).filter(Boolean);
   if (tokens.length === 1) {
     const tokenLower = tokens[0].toLowerCase();
@@ -129,22 +156,39 @@ function pushMessageForKeyword(keyword, msg) {
 function hydratePersistent(p = {}) {
   setInitialKeywords(Array.isArray(p.keywords) ? p.keywords : []);
 
-  const legacyList = Array.isArray(p.blacklist) ? p.blacklist : [];
-  const legacyMap = {};
-  for (const u of legacyList) {
-    if (!u?.id) continue;
-    legacyMap[String(u.id)] = { id: String(u.id), username: u.username || '', displayName: u.displayName || u.username || String(u.id) };
-  }
-
   for (const kw of state.keywords) {
     const cfg = p.keywordConfigs?.[kw] || {};
-    state.keywordConfigs[kw] = { channels: normalizeChannels(cfg.channels || []), caseSensitive: !!cfg.caseSensitive, showBlacklisted: !!cfg.showBlacklisted };
-    const bl = p.blacklistByKeyword?.[kw] || legacyMap;
+    state.keywordConfigs[kw] = {
+      channels: normalizeChannels(cfg.channels || []),
+      caseSensitive: !!cfg.caseSensitive,
+      showBlacklisted: !!cfg.showBlacklisted,
+      guildId: cfg.guildId || null
+    };
+    const bl = p.blacklistByKeyword?.[kw] || {};
     state.blacklistByKeyword[kw] = {};
     Object.keys(bl).forEach((uid) => { state.blacklistByKeyword[kw][uid] = bl[uid]; });
   }
 }
 
-function getPersistentSnapshot() { return { keywords: [...state.keywords], keywordConfigs: state.keywordConfigs, blacklistByKeyword: state.blacklistByKeyword }; }
+function getPersistentSnapshot() {
+  return {
+    keywords: [...state.keywords],
+    keywordConfigs: state.keywordConfigs,
+    blacklistByKeyword: state.blacklistByKeyword
+  };
+}
 
-module.exports = { state, setInitialKeywords, addKeyword, updateKeywordConfig, removeKeyword, setBlacklistForKeyword, registerChannel, getMatchingKeywords, pushMessageForKeyword, hydratePersistent, getPersistentSnapshot };
+module.exports = {
+  state,
+  setInitialKeywords,
+  addKeyword,
+  updateKeywordConfig,
+  removeKeyword,
+  setBlacklistForKeyword,
+  registerGuild,
+  registerChannel,
+  getMatchingKeywords,
+  pushMessageForKeyword,
+  hydratePersistent,
+  getPersistentSnapshot
+};
