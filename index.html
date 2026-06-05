@@ -125,14 +125,38 @@
       col.draggable = true;
       col.dataset.kw = kw;
 
-      col.innerHTML = `
-        <div class="colh">
-          <div class="title">${kw}</div>
-          <div class="count">${(columns[kw]||[]).length}/30</div>
-          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="removeKeyword('${kw}')">×</button>
-        </div>
-        <div class="list"></div>
-      `;
+     function createColumn(kw) {
+       const col = document.createElement('div');
+       col.className = 'col';
+       col.draggable = true;
+       col.dataset.kw = kw;
+
+       const header = document.createElement('div');
+       header.className = 'colh';
+
+       const title = document.createElement('div');
+       title.className = 'title';
+       title.textContent = kw;
+
+       const count = document.createElement('div');
+       count.className = 'count';
+       count.textContent = `${(columns[kw]||[]).length}/30`;
+
+       const removeBtn = document.createElement('button');
+       removeBtn.className = 'btn';
+       removeBtn.style.cssText = 'padding:2px 8px;font-size:11px';
+       removeBtn.textContent = '×';
+       removeBtn.addEventListener('click', () => removeKeyword(kw));
+
+       header.append(title, count, removeBtn);
+
+       const list = document.createElement('div');
+       list.className = 'list';
+
+       col.append(header, list);
+
+       const msgs = columns[kw] || [];
+       msgs.forEach(msg => list.appendChild(createMessageCard(msg)));
 
       const list = col.querySelector('.list');
       const msgs = columns[kw] || [];
