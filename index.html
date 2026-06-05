@@ -83,8 +83,12 @@
       };
       ws.onclose = () => {
         document.getElementById('nav-status').className = 'status-pill disconnected';
-        document.getElementById('nav-status-text').textContent = 'disconnected';
+        document.getElementById('nav-status').textContent = 'disconnected';
         setTimeout(connect, 2000);
+      };
+      ws.onerror = () => {
+        document.getElementById('nav-status').className = 'status-pill error';
+        document.getElementById('nav-status-text').textContent = 'error';
       };
       ws.onmessage = e => {
         const d = JSON.parse(e.data);
