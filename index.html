@@ -18,7 +18,7 @@
     .btn:hover { background: #25282f; }
     .main { height: calc(100vh - 56px); display: flex; }
     #wrap { flex: 1; display: flex; gap: 12px; overflow-x: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: #4b5563 transparent; }
-    #wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+    #wrap::-webkit-scrollbar { height: 8px; }
     #wrap::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
     .col { width: 340px; min-width: 340px; background: #141518; border: 1px solid #2a2c32; border-radius: 12px; display: flex; flex-direction: column; position: relative; }
     .colh { padding: 12px; border-bottom: 1px solid #2a2c32; display: flex; align-items: center; gap: 8px; cursor: grab; }
@@ -28,9 +28,9 @@
     .list::-webkit-scrollbar { width: 6px; }
     .list::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     .card { background: #1b1f26; border: 1px solid #2a2c32; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
-    .card-actions { margin-top: 8px; display: flex; gap: 6px; }
-    .card-actions button { font-size: 11px; padding: 2px 8px; }
-    .new-pill { display: none; position: sticky; top: 2px; background: #1e293b; border: 1px solid #334155; color: #bfdbfe; padding: 4px 8px; border-radius: 8px; font-size: 11px; margin-bottom: 8px; cursor: pointer; }
+    .card-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+    .card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; cursor: pointer; }
+    .card-actions button:hover { background: #25282f; }
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 100; }
     .modal.open { display: flex; }
     .modal-content { background: #1a1c20; border: 1px solid #2a2c32; border-radius: 12px; width: 440px; max-height: 80vh; overflow: auto; }
@@ -44,7 +44,7 @@
 <body>
   <header>
     <div class="logo">DiscordDeck</div>
-    <div id="nav-status" class="status-pill"><div class="status-dot"></div><span id="nav-status-text">connecting</span></div>
+    <div id="nav-status" class="status-pill"><div class="status-dot"></div><span id="nav-status-text">connected</span></div>
     <div class="right">
       <button id="add" class="btn">+ Keyword</button>
       <button id="btn-blacklist" class="btn">Blacklist</button>
@@ -195,9 +195,10 @@
         <div style="margin-top:4px">${msg.content}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
         <div class="card-actions">
-          <button onclick="toggleFavorite(${JSON.stringify(msg.author)})">★</button>
+          <button onclick="toggleFavorite(${JSON.stringify(msg.author)})">★ Fav</button>
           <button onclick="hideMessage('${msg.id}', this)">Hide</button>
           <button onclick="blockUser('${kw}', ${JSON.stringify(msg.author)})">Block</button>
+          <button onclick="copyMessage('${msg.id}', this)">Copy</button>
         </div>
       `;
       return card;
@@ -205,11 +206,7 @@
 
     function toggleFavorite(user) {
       if (!user?.id) return;
-      if (favorites[user.id]) {
-        delete favorites[user.id];
-      } else {
-        favorites[user.id] = user;
-      }
+      favorites[user.id] ? delete favorites[user.id] : favorites[user.id] = user;
       renderColumns();
     }
 
@@ -221,6 +218,15 @@
     function blockUser(kw, user) {
       if (!user?.id) return;
       ws.send(JSON.stringify({ type: 'blacklist_user', keyword: kw, user }));
+    }
+
+    function copyMessage(id, btn) {
+      const card = btn.closest('.card');
+      const text = card.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1200);
+      });
     }
 
     function queueMessage(msg) {
@@ -248,7 +254,6 @@
       guildSelect.innerHTML = '';
       channelList.innerHTML = '';
 
-      // Populate guilds
       Object.values(guilds).forEach(guild => {
         const opt = document.createElement('option');
         opt.value = guild.id;
@@ -257,7 +262,7 @@
       });
 
       if (Object.keys(guilds).length === 0) {
-        channelList.innerHTML = '<div style="color:#9ca3af">No guilds detected yet. Send messages in Discord.</div>';
+        channelList.innerHTML = '<div style="color:#9ca3af;padding:8px">No guilds detected. Send messages first.</div>';
       } else {
         updateChannelList();
       }
@@ -273,10 +278,7 @@
         Object.values(guild.channels || {}).forEach(ch => {
           const div = document.createElement('div');
           div.className = 'channel-item';
-          div.innerHTML = `
-            <input type="checkbox" value="${ch.id}" checked>
-            <span>${ch.name}</span>
-          `;
+          div.innerHTML = `<input type="checkbox" value="${ch.id}" checked> <span>${ch.name}</span>`;
           channelList.appendChild(div);
         });
       }
@@ -284,34 +286,30 @@
       document.getElementById('confirm-add').onclick = () => {
         const kw = document.getElementById('kw-input').value.trim().toLowerCase();
         if (!kw) return;
-
         const gid = guildSelect.value || null;
         const selected = Array.from(channelList.querySelectorAll('input:checked')).map(el => el.value);
 
-        ws.send(JSON.stringify({
-          type: 'add_keyword',
-          keyword: kw,
-          guildId: gid,
-          channels: selected
-        }));
-
+        ws.send(JSON.stringify({ type: 'add_keyword', keyword: kw, guildId: gid, channels: selected }));
         modal.style.display = 'none';
         document.getElementById('kw-input').value = '';
       };
 
-      document.getElementById('cancel-add').onclick = () => {
-        modal.style.display = 'none';
-      };
+      document.getElementById('cancel-add').onclick = () => modal.style.display = 'none';
     }
+
+    // Horizontal scroll with mouse wheel
+    document.getElementById('wrap').addEventListener('wheel', function(e) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        this.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
 
     // Event bindings
     document.getElementById('add').onclick = openAddModal;
-    document.getElementById('btn-blacklist').onclick = () => alert('Blacklist modal (original feature)');
-    document.getElementById('btn-favorites').onclick = () => alert('Favorites modal (original feature)');
-    document.getElementById('btn-clear-hidden').onclick = () => {
-      hidden.clear();
-      renderColumns();
-    };
+    document.getElementById('btn-blacklist').onclick = () => alert('Blacklist modal');
+    document.getElementById('btn-favorites').onclick = () => alert('Favorites modal');
+    document.getElementById('btn-clear-hidden').onclick = () => { hidden.clear(); renderColumns(); };
 
     connect();
   </script>
