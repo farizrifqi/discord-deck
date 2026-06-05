@@ -140,6 +140,28 @@ function renderGuildSelect() {
   renderAddChannels();
 }
 
+function addKeywordWithGuild() {
+  const rawKeyword = prompt("Keyword:");
+  const keyword = rawKeyword?.trim().toLowerCase();
+  if (!keyword) return;
+
+  const guildEntries = Object.values(guilds || {});
+  if (!guildEntries.length) {
+    send({ type: 'add_keyword', keyword, channels: [] });
+    return;
+  }
+
+  const guildId = prompt("Guild:\n" + guildEntries.map((guild) => `${guild.id} - ${guild.name || guild.id}`).join("\n"));
+  if (!guildId) return;
+
+  const channelMap = guildEntries.find((guild) => String(guild.id) === String(guildId))?.channels || {};
+  const channelEntries = Object.values(channelMap);
+  const channelInput = prompt("Channels (comma IDs):\n" + channelEntries.map((channel) => `${channel.id} - ${channel.name || channel.id}`).join("\n"));
+  const channels = channelInput ? channelInput.split(',').map((id) => id.trim()).filter(Boolean) : [];
+
+  send({ type: 'add_keyword', keyword, guildId, channels });
+}
+
 function ensureFav() {
   if (!keywords.includes(FAV_COL)) keywords.unshift(FAV_COL);
   if (!keywordConfigs[FAV_COL]) keywordConfigs[FAV_COL] = { channels: [], caseSensitive: false, showBlacklisted: true };
@@ -591,22 +613,7 @@ document.getElementById('add-channel-search').addEventListener('input', (event) 
 });
 document.getElementById('add-channel-all').onclick = () => document.querySelectorAll('#add-channel-list .ch').forEach((input) => { input.checked = true; });
 document.getElementById('add-channel-clear').onclick = () => document.querySelectorAll('#add-channel-list .ch').forEach((input) => { input.checked = false; });
-document.getElementById('add').onclick = () => {
-  const input = document.getElementById('kw');
-  const keyword = input.value.trim().toLowerCase();
-  if (!keyword) return;
-
-  const guildId = selectedGuildId();
-  if (!guildId) {
-    alert('Select a guild before adding a keyword.');
-    guildSelect.focus();
-    return;
-  }
-
-  const selectedChannelIds = [...document.querySelectorAll('#add-channel-list .ch:checked')].map((channel) => channel.value);
-  send({ type: 'add_keyword', keyword, guildId, channels: selectedChannelIds });
-  input.value = '';
-};
+document.getElementById('add').onclick = addKeywordWithGuild;
 document.getElementById('kw').addEventListener('keydown', (event) => {
   if (event.key === 'Enter') document.getElementById('add').click();
 });
