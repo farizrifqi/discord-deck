@@ -1,52 +1,245 @@
-<!doctype html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1'/><title>DiscordDeck</title><style>*{box-sizing:border-box}body{margin:0;background:#0d0e10;color:#e5e7eb;font-family:Inter,system-ui}header{height:56px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#141518;border-bottom:1px solid #2a2c32}.status-pill{display:flex;align-items:center;gap:6px;border:1px solid #2a2c32;background:#1a1c20;color:#e5e7eb;border-radius:999px;padding:3px 9px;font-size:12px}.status-dot{width:7px;height:7px;border-radius:50%;background:#6b7280}.status-pill.connected .status-dot{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.5)}.status-pill.disconnected .status-dot,.status-pill.error .status-dot{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.5)}
-.right{margin-left:auto;display:flex;gap:8px}.btn{border:1px solid #2a2c32;background:#1a1c20;color:#e5e7eb;border-radius:10px;padding:6px 10px;cursor:pointer;text-decoration:none}.main{height:calc(100vh - 56px);display:flex;position:relative}.leftbar{width:56px;background:#141518;border-right:1px solid #2a2c32;padding:10px;display:flex;align-items:flex-start;justify-content:center}.left-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid #2a2c32;background:#1a1c20;color:#cbd5e1;border-radius:10px;text-decoration:none;font-size:18px}.left-icon:hover{border-color:#394150;background:#1b1f26}#wrap{flex:1;display:flex;gap:10px;overflow:auto;padding:10px;position:relative;scrollbar-width:thin;scrollbar-color:#4b5563 transparent}#wrap::-webkit-scrollbar{width:10px;height:10px}#wrap::-webkit-scrollbar-track{background:transparent}#wrap::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#4b5563,#374151);border-radius:999px;border:2px solid transparent;background-clip:padding-box}#wrap::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#6b7280,#4b5563)}.col{width:360px;min-width:360px;height:100%;display:flex;flex-direction:column;border:1px solid #2a2c32;border-radius:12px;background:#141518;position:relative}
-.wrap-overlay{position:absolute;inset:0;z-index:999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(1px)}
-.wrap-overlay.show{display:flex}
-.wrap-overlay .ov-card{display:flex;align-items:center;gap:10px;background:#111317;border:1px solid #2a2c32;color:#e5e7eb;padding:14px 18px;border-radius:12px;font-size:14px;font-weight:600}
-.spin{width:14px;height:14px;border:2px solid #334155;border-top-color:#93c5fd;border-radius:50%;animation:sp 1s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}.col.dragging{opacity:.6}.colh{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2c32}.title{flex:1;font-weight:700}.count{font-size:12px;color:#9ca3af}.list{flex:1;overflow:auto;padding:8px;position:relative;scrollbar-width:thin;scrollbar-color:#4b5563 transparent}.list::-webkit-scrollbar{width:8px}.list::-webkit-scrollbar-track{background:transparent}.list::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#4b5563,#374151);border-radius:999px;border:2px solid transparent;background-clip:padding-box}.list::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#6b7280,#4b5563)}.list .top-shadow{position:sticky;top:-8px;left:0;right:0;height:32px;z-index:5;pointer-events:none;margin:0 -8px 0 -8px;background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,.28) 55%,rgba(0,0,0,0));border-top-left-radius:10px;border-top-right-radius:10px;opacity:0;transition:opacity .18s ease}.list.show-shadow .top-shadow{opacity:1}.new-pill{display:none;position:sticky;top:2px;z-index:6;background:#1e293b;border:1px solid #334155;color:#bfdbfe;padding:4px 8px;border-radius:8px;font-size:11px;margin:0 0 8px 0;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.35)}.card{border:1px solid #2a2c32;background:linear-gradient(180deg,#1b1f26,#171a20);border-radius:10px;padding:10px;margin-bottom:8px}.card.fav{border-color:#3b82f6;box-shadow:0 0 0 1px #1d4ed8 inset}.body{margin-top:8px;font-size:13px;line-height:1.45;word-break:break-word}.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chip{font-size:11px;padding:4px 8px;border-radius:8px}.pop{display:none;position:absolute;right:10px;top:44px;width:300px;background:#12161d;border:1px solid #394150;border-radius:12px;padding:10px;z-index:20}.pop.open{display:block}.search{width:100%;padding:6px 8px;border-radius:8px;border:1px solid #394150;background:#0f1318;color:#e5e7eb;margin:6px 0}.chlist{max-height:150px;overflow:auto;border:1px solid #2a2c32;border-radius:8px;padding:6px}.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center}.modal.open{display:flex}.modalcard{width:min(720px,92vw);max-height:80vh;overflow:auto;background:#141518;border:1px solid #2a2c32;border-radius:12px;padding:12px}.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a2c32}</style></head><body><header><b>Discord<span style='color:#6366f1'>Deck</span></b><div id='nav-status' class='status-pill disconnected'><span class='status-dot'></span><span id='nav-status-text'>disconnected</span></div><span id='health' style='font-size:11px;color:#9ca3af'></span><div class='right'><button id='btn-clear-hidden' class='btn'>Clear hidden</button><button id='btn-favorites' class='btn'>Favorited users</button><button id='btn-blacklist' class='btn'>Blocked users</button><input id='kw' class='btn' style='width:180px;text-align:left' placeholder='add keyword'/><button id='add' class='btn' style='background:#6366f1'>+</button></div></header><div class='main'><aside class='leftbar'><a class='left-icon' href='/values.html' title='Values'>&#128220;</a></aside><div id='wrap'><div id='wrap-overlay' class='wrap-overlay'><div class='ov-card'><span class='spin'></span><span id='ov-text'>Reconnecting...</span></div></div></div></div><div id='modal' class='modal'><div class='modalcard'><div style='display:flex;justify-content:space-between'><b>Blocked users by keyword</b><button id='close-modal' class='btn'>Close</button></div><div id='mcontent'></div></div></div><div id='fav-modal' class='modal'><div class='modalcard'><div style='display:flex;justify-content:space-between'><b>Favorited users</b><button id='close-fav-modal' class='btn'>Close</button></div><div id='fav-content'></div></div></div><script>let keywords=[],keywordConfigs={},channelsSeen=[],blacklistByKeyword={},columns={};const FAV_COL='__favorites__';const favorites=JSON.parse(localStorage.getItem('discorddeck.favorites.v1')||'{}');const saveFav=()=>localStorage.setItem('discorddeck.favorites.v1',JSON.stringify(favorites));const hidden=new Set(JSON.parse(localStorage.getItem('discorddeck.hiddenMessageIds.v1')||'[]'));const saveHidden=()=>localStorage.setItem('discorddeck.hiddenMessageIds.v1',JSON.stringify([...hidden]));let order=JSON.parse(localStorage.getItem('discorddeck.columnOrder.v1')||'[]');const saveOrder=()=>localStorage.setItem('discorddeck.columnOrder.v1',JSON.stringify(order));const esc=s=>String(s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));const md=s=>esc(s||'').replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>').replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/\*([^*\n]+)\*/g,'<i>$1</i>').replace(/(https?:\/\/[^\s<]+)/g,'<a class="btn chip" href="$1" target="_blank">$1</a>').replace(/\n/g,'<br/>');const wrap=document.getElementById('wrap');
-const overlay=document.getElementById('wrap-overlay');
-const ovText=document.getElementById('ov-text');
-const navStatus=document.getElementById('nav-status');
-const navStatusText=document.getElementById('nav-status-text');
-let ws,retry=1e3,guilds={};
-const setNavStatus=(s)=>{navStatus.className='status-pill '+s;navStatusText.textContent=s;};
-const showOverlay=(text)=>{ovText.textContent=text||'Reconnecting...';overlay.classList.add('show');};
-const hideOverlay=()=>overlay.classList.remove('show');const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));function addKeywordWithGuild() {
-  const kw = prompt("Keyword:");
-  if (!kw) return;
-  const g = Object.values(guilds || {});
-  if (!g.length) {
-    send({type:"add_keyword", keyword: kw.toLowerCase(), channels:[]});
-    return;
-  }
-  const gid = prompt("Guild:
-" + g.map(x => x.id + " - " + x.name).join("
-"));
-  if (!gid) return;
-  const chObj = g.find(x => x.id === gid)?.channels || {};
-  const chList = Object.values(chObj);
-  const chInput = prompt("Channels (comma IDs):
-" + chList.map(c => c.id + " - " + c.name).join("
-"));
-  const channels = chInput ? chInput.split(",").map(s=>s.trim()).filter(Boolean) : [];
-  send({type:"add_keyword", keyword: kw.toLowerCase(), guildId: gid, channels});
-}
-function ensureFav(){if(!keywords.includes(FAV_COL))keywords.unshift(FAV_COL);if(!keywordConfigs[FAV_COL])keywordConfigs[FAV_COL]={channels:[],caseSensitive:false,showBlacklisted:true};if(!columns[FAV_COL])columns[FAV_COL]=[]}function ensureOrder(){ensureFav();const set=new Set(keywords);order=order.filter(k=>set.has(k));keywords.forEach(k=>!order.includes(k)&&order.push(k));saveOrder();}function isBlocked(kw,id){return !!(blacklistByKeyword?.[kw]?.[id])}function toggleFavorite(u){if(!u?.id)return;favorites[u.id]?delete favorites[u.id]:favorites[u.id]={id:u.id,username:u.username||'',displayName:u.displayName||u.username||u.id};saveFav();renderFavModal();renderColumns()}function renderFavModal(){const box=document.getElementById('fav-content');box.innerHTML='';const users=Object.values(favorites);const top=document.createElement('div');top.style.cssText='display:flex;justify-content:flex-end;margin:8px 0';if(users.length){const b=document.createElement('button');b.className='btn';b.textContent='Unfavorite all';b.onclick=()=>{Object.keys(favorites).forEach(k=>delete favorites[k]);saveFav();renderFavModal();renderColumns()};top.appendChild(b)}box.appendChild(top);if(!users.length){box.append('No favorites yet');return;}users.forEach(u=>{const r=document.createElement('div');r.className='row';const s=document.createElement('span');s.textContent=u.displayName||u.username||u.id;const b=document.createElement('button');b.className='btn';b.textContent='Unfavorite';b.onclick=()=>toggleFavorite(u);r.append(s,b);box.appendChild(r)})}function renderModal(){const box=document.getElementById('mcontent');box.innerHTML='';for(const kw of keywords){const users=Object.values(blacklistByKeyword[kw]||{});const sec=document.createElement('div');const head=document.createElement('div');head.style.cssText='display:flex;justify-content:space-between;align-items:center;margin:8px 0';head.innerHTML=`<h4>${esc(kw)} (${users.length})</h4>`;if(users.length){const b=document.createElement('button');b.className='btn';b.textContent='Unblock all';b.onclick=()=>users.forEach(u=>send({type:'unblacklist_user',keyword:kw,user:{id:u.id}}));head.appendChild(b)}sec.appendChild(head);if(!users.length){const n=document.createElement('div');n.style.color='#888';n.textContent='None';sec.appendChild(n)}users.forEach(u=>{const r=document.createElement('div');r.className='row';const s=document.createElement('span');s.textContent=u.displayName||u.username||u.id;const b=document.createElement('button');b.className='btn';b.textContent='Unblock';b.onclick=()=>send({type:'unblacklist_user',keyword:kw,user:{id:u.id}});r.append(s,b);sec.appendChild(r)});box.appendChild(sec)}}function card(msg,kw){const fav=!!favorites[msg.author?.id],blocked=isBlocked(kw,msg.author?.id),d=document.createElement('div');d.className='card'+(fav?' fav':'');const ts=new Date(msg.timestamp||Date.now());const rel=((Date.now()-ts)/60000|0);d.innerHTML=`<div style='display:flex;justify-content:space-between;font-size:12px'><div><b>${esc(msg.author?.displayName||'unknown')}</b> <span style='color:#9ca3af'>(@${esc(msg.author?.username||'unknown')})</span></div><span title='${ts.toLocaleString()}'>${rel<1?'just now':rel+'m ago'}</span></div><div style='font-size:11px;color:#8b93a1;margin-top:2px'>#${esc(msg.channel?.name||'')}</div><div class='body'>${md(msg.content||'')}</div><div class='chips'>${blocked?'<button class="btn chip ub">Unblock</button>':'<button class="btn chip bl" style="background:#3a1316;border-color:#7f1d1d;color:#fecaca">Block</button>'}<button class='btn chip fav' style='background:${fav?'#1e3a8a':'#1e293b'};border-color:${fav?'#3b82f6':'#334155'};color:#bfdbfe'>⭐</button><button class='btn chip hide'>👁️</button><a class='btn chip' href='${msg.messageUrl||'#'}' target='_blank'>🌐</a><a class='btn chip' href='discord://-/channels/${msg.guild?.id||'@me'}/${msg.channel?.id||''}/${msg.id||''}'>💻</a></div>`;d.querySelector('.bl')?.addEventListener('click',()=>send({type:'blacklist_user',keyword:kw,user:msg.author}));d.querySelector('.ub')?.addEventListener('click',()=>send({type:'unblacklist_user',keyword:kw,user:msg.author}));d.querySelector('.fav')?.addEventListener('click',()=>toggleFavorite(msg.author));d.querySelector('.hide')?.addEventListener('click',()=>{hidden.add(String(msg.id));saveHidden();d.remove()});return d}function chHtml(sel=[]){return channelsSeen.map(c=>`<label style='display:flex;gap:6px'><input class='ch' type='checkbox' value='${c.id}' ${sel.includes(c.id)?'checked':''}/>#${esc(c.name)}</label>`).join('')}function column(kw){const cfg=keywordConfigs[kw]||{channels:[],caseSensitive:false,showBlacklisted:false};const c=document.createElement('div');c.className='col';c.dataset.kw=kw;c.draggable=true;const t=kw===FAV_COL?'Favorites ⭐':kw;c.innerHTML=`<div class='colh'><button class='btn dh'>::</button><div class='title'>${esc(t)}</div><div class='count'>0/30</div><button class='btn opt'>...</button><button class='btn rm' ${kw===FAV_COL?'style="display:none"':''}>x</button></div><div class='pop'><label><input class='cs' type='checkbox' ${cfg.caseSensitive?'checked':''}/> Case sensitive</label><br/><label><input class='sb' type='checkbox' ${cfg.showBlacklisted?'checked':''}/> Show blocked</label><input class='search' placeholder='Search channels'/><div class='chlist'>${chHtml(cfg.channels||[])}</div><div style='display:flex;gap:6px;margin-top:8px'><button class='btn all'>All</button><button class='btn clear'>Clear</button></div></div><div class='list'><div class='top-shadow'></div><button class='new-pill'></button></div>`;const pop=c.querySelector('.pop');c.querySelector('.opt').onclick=e=>{document.querySelectorAll('.pop.open').forEach(p=>p!==pop&&p.classList.remove('open'));pop.classList.toggle('open');e.stopPropagation()};c.querySelector('.rm').onclick=()=>send({type:'remove_keyword',keyword:kw});c.querySelector('.cs').onchange=e=>send({type:'update_keyword_config',keyword:kw,patch:{caseSensitive:!!e.target.checked}});c.querySelector('.sb').onchange=e=>send({type:'update_keyword_config',keyword:kw,patch:{showBlacklisted:!!e.target.checked}});const apply=()=>send({type:'update_keyword_config',keyword:kw,patch:{channels:[...c.querySelectorAll('.ch:checked')].map(x=>x.value)}});c.querySelector('.chlist').addEventListener('change',apply);c.querySelector('.search').addEventListener('input',e=>{const q=e.target.value.toLowerCase();c.querySelectorAll('.chlist label').forEach(l=>l.style.display=l.textContent.toLowerCase().includes(q)?'flex':'none')});c.querySelector('.all').onclick=()=>{c.querySelectorAll('.ch').forEach(x=>x.checked=true);apply()};c.querySelector('.clear').onclick=()=>{c.querySelectorAll('.ch').forEach(x=>x.checked=false);apply()};let de=false;c.querySelector('.dh').addEventListener('mousedown',()=>de=true);c.addEventListener('dragstart',e=>{if(!de){e.preventDefault();return;}c.classList.add('dragging')});c.addEventListener('dragend',()=>{de=false;c.classList.remove('dragging');order=[...wrap.querySelectorAll('.col')].map(x=>x.dataset.kw);saveOrder()});c.addEventListener('dragover',e=>{e.preventDefault();const d=wrap.querySelector('.col.dragging');if(!d||d===c)return;const r=c.getBoundingClientRect();wrap.insertBefore(d,e.clientX<r.left+r.width/2?c:c.nextSibling)});return c}function getCol(kw){
-  let c=[...wrap.querySelectorAll('.col')].find(el=>el.dataset.kw===kw);
-  if(!c){c=column(kw);wrap.appendChild(c)}
-  return c;
-}const newCount={};function renderColumns(){ensureOrder();wrap.querySelectorAll('.col').forEach(c=>{if(!keywords.includes(c.dataset.kw))c.remove()});order.forEach(kw=>{const cfg=keywordConfigs[kw]||{},raw=columns[kw]||[],msgs=(cfg.showBlacklisted?raw:raw.filter(m=>!isBlocked(kw,m.author?.id))).filter(m=>!hidden.has(String(m.id)));const c=getCol(kw),list=c.querySelector('.list');wrap.appendChild(c);const pill=list.querySelector('.new-pill')||document.createElement('button');pill.className='new-pill';const shadow=list.querySelector('.top-shadow')||document.createElement('div');shadow.className='top-shadow';list.innerHTML='';list.appendChild(shadow);list.appendChild(pill);msgs.forEach(m=>list.appendChild(card(m,kw)));c.querySelector('.count').textContent=`${msgs.length}/30`;updateTopShadow(list)})}const pending=new Map();let timer=null;function queue(msg){if(!msg?.id||hidden.has(String(msg.id)))return;if(favorites[msg.author?.id]){columns[FAV_COL]=columns[FAV_COL]||[];columns[FAV_COL].unshift({...msg,keywords:[FAV_COL]});columns[FAV_COL].length=Math.min(columns[FAV_COL].length,30);pending.set(FAV_COL,[...(pending.get(FAV_COL)||[]),{...msg,keywords:[FAV_COL]}])}(msg.keywords||[]).forEach(kw=>{if(!keywords.includes(kw))return;columns[kw]=columns[kw]||[];columns[kw].unshift(msg);columns[kw].length=Math.min(columns[kw].length,30);pending.set(kw,[...(pending.get(kw)||[]),msg])});if(!timer)timer=setTimeout(flush,60)}function updateTopShadow(list){
-  const hasMsg=list.querySelectorAll('.card').length>0;
-  const scrolled=list.scrollTop>0;
-  list.classList.toggle('show-shadow', hasMsg && scrolled);
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiscordDeck</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0d0e10; color: #e5e7eb; font-family: Inter, system-ui, sans-serif; }
+    header { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #141518; border-bottom: 1px solid #2a2c32; }
+    .status-pill { display: flex; align-items: center; gap: 6px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; border-radius: 999px; padding: 4px 12px; font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; }
+    .status-pill.connected .status-dot { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,.5); }
+    .status-pill.disconnected .status-dot, .status-pill.error .status-dot { background: #ef4444; }
+    .right { margin-left: auto; display: flex; gap: 8px; }
+    .btn { border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+    .btn:hover { background: #25282f; }
+    .main { height: calc(100vh - 56px); display: flex; }
+    #wrap { flex: 1; display: flex; gap: 12px; overflow-x: auto; padding: 16px; }
+    .col { width: 340px; min-width: 340px; background: #141518; border: 1px solid #2a2c32; border-radius: 12px; display: flex; flex-direction: column; }
+    .colh { padding: 12px; border-bottom: 1px solid #2a2c32; display: flex; align-items: center; gap: 8px; }
+    .title { font-weight: 600; flex: 1; }
+    .count { font-size: 12px; color: #9ca3af; }
+    .list { flex: 1; overflow-y: auto; padding: 8px; }
+    .card { background: #1b1f26; border: 1px solid #2a2c32; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #1a1c20; border: 1px solid #2a2c32; border-radius: 12px; width: 420px; max-height: 80vh; overflow: auto; }
+    .modal-header { padding: 14px 18px; border-bottom: 1px solid #2a2c32; font-weight: 600; }
+    .modal-body { padding: 16px; }
+    select, input { width: 100%; padding: 8px; background: #0f1318; border: 1px solid #2a2c32; color: #e5e7eb; border-radius: 6px; margin-bottom: 10px; }
+    .guild-list { max-height: 200px; overflow: auto; }
+    .guild-item { padding: 8px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; }
+    .guild-item:hover { background: #25282f; }
+    .guild-item.selected { background: #1e40af; }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="nav-status" class="status-pill"><div class="status-dot"></div><span id="nav-status-text">connecting</span></div>
+    <div class="right">
+      <button id="add" class="btn">+ Keyword</button>
+      <button id="btn-blacklist" class="btn">Blacklist</button>
+      <button id="btn-favorites" class="btn">Favorites</button>
+      <button id="btn-clear-hidden" class="btn">Clear Hidden</button>
+    </div>
+  </header>
 
-function bindPill(kw,list,p){if(p.dataset.b==='1')return;p.dataset.b='1';p.onclick=()=>{list.scrollTo({top:0,behavior:'smooth'});newCount[kw]=0;p.style.display='none';updateTopShadow(list)};list.addEventListener('scroll',()=>{if(list.scrollTop<=0){newCount[kw]=0;p.style.display='none'}updateTopShadow(list);});}function flush(){timer=null;for(const [kw,items] of pending){const col=getCol(kw),list=col.querySelector('.list'),pill=list.querySelector('.new-pill');bindPill(kw,list,pill);const away=list.scrollTop>0;for(let i=items.length-1;i>=0;i--){const node=card(items[i],kw);if(away){const h=list.scrollHeight;list.insertBefore(node,pill.nextSibling);list.scrollTop+=list.scrollHeight-h}else list.insertBefore(node,pill.nextSibling)}while(list.querySelectorAll('.card').length>30){const cs=list.querySelectorAll('.card');cs[cs.length-1].remove()}if(away){newCount[kw]=(newCount[kw]||0)+items.length;pill.style.display='inline-block';pill.textContent=`${newCount[kw]} new message(s) - click to top`}col.querySelector('.count').textContent=`${list.querySelectorAll('.card').length}/30`}pending.clear()}function connect(){
-ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host);
-showOverlay('Reconnecting...');
-ws.onopen=()=>{retry=1e3;setNavStatus('connected');hideOverlay();send({type:'resync'})};
-ws.onerror=()=>{setNavStatus('error');showOverlay('Connection error');};
-ws.onclose=()=>{setNavStatus('disconnected');showOverlay('Reconnecting...');setTimeout(connect,retry);retry=Math.min(retry*2,15000)};
-ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return}if(d.type==='init'){console.log('[init]',d.keywords);keywords=d.keywords||[];keywordConfigs=d.keywordConfigs||{};columns=d.columns||{};guilds = d.guilds || {};
-guilds = d.guilds || {};channelsSeen=d.channelsSeen||[];blacklistByKeyword=d.blacklistByKeyword||{};ensureFav();renderColumns();renderModal();renderFavModal()}if(d.type==='message')queue(d);if(d.type==='keyword_added'||d.type==='keyword_removed'||d.type==='keyword_config_updated'){console.log('[kw-event]',d);if(Array.isArray(d.keywords))keywords=d.keywords;keywordConfigs=d.keywordConfigs||keywordConfigs;if(d.type==='keyword_added'&&d.keyword&&!keywords.includes(d.keyword))keywords.push(d.keyword);if(d.type==='keyword_removed')delete columns[d.keyword];ensureFav();renderColumns();renderModal();renderFavModal()}if(d.type==='blacklist_updated'){blacklistByKeyword=d.blacklistByKeyword||{};renderColumns();renderModal()}if(d.type==='channel_seen'){if(d.channel?.id&&!channelsSeen.some(x=>x.id===d.channel.id)){channelsSeen.push(d.channel);renderColumns()}}if(d.type==='health'){document.getElementById('health').textContent=`ws:${d.wsClients} last:${d.lastDiscordMessageAt?Math.floor((Date.now()-d.lastDiscordMessageAt)/1000)+'s':'-'}`}}}document.getElementById('add').onclick = () => addKeywordWithGuild()=>{const i=document.getElementById('kw'),v=i.value.trim().toLowerCase();if(!v)return;send({type:'add_keyword',keyword:v,channels:[]});i.value=''};document.getElementById('kw').addEventListener('keydown',e=>e.key==='Enter'&&document.getElementById('add').click());document.getElementById('btn-clear-hidden').onclick=()=>{hidden.clear();saveHidden();renderColumns()};document.getElementById('btn-blacklist').onclick=()=>document.getElementById('modal').classList.add('open');document.getElementById('close-modal').onclick=()=>document.getElementById('modal').classList.remove('open');document.getElementById('btn-favorites').onclick=()=>{renderFavModal();document.getElementById('fav-modal').classList.add('open')};document.getElementById('close-fav-modal').onclick=()=>document.getElementById('fav-modal').classList.remove('open');document.addEventListener('click',e=>{if(!e.target.closest('.opt')&&!e.target.closest('.pop'))document.querySelectorAll('.pop.open').forEach(p=>p.classList.remove('open'))});setInterval(()=>send({type:'resync'}),45000);connect();</script></body></html>
+  <div class="main">
+    <div id="wrap"></div>
+  </div>
+
+  <!-- Add Keyword Modal -->
+  <div id="add-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">Add Keyword</div>
+      <div class="modal-body">
+        <input id="kw-input" placeholder="Keyword (e.g. offer)" />
+        
+        <div id="guild-section">
+          <label style="font-size:12px;color:#9ca3af">Guild</label>
+          <select id="guild-select"></select>
+        </div>
+
+        <div id="channel-section" style="margin-top:12px;display:none">
+          <label style="font-size:12px;color:#9ca3af">Channels (select multiple)</label>
+          <div id="channel-list" style="max-height:160px;overflow:auto;border:1px solid #2a2c32;border-radius:6px;padding:6px;"></div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+          <button id="cancel-add" class="btn">Cancel</button>
+          <button id="confirm-add" class="btn">Add Keyword</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    let keywords = [];
+    let keywordConfigs = {};
+    let columns = {};
+    let guilds = {};
+    let channelsSeen = [];
+    let blacklistByKeyword = {};
+    let favorites = {};
+    let hidden = new Set();
+    let order = [];
+
+    const FAV_COL = 'favorites';
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        document.getElementById('nav-status').className = 'status-pill connected';
+        document.getElementById('nav-status-text').textContent = 'connected';
+        ws.send(JSON.stringify({ type: 'resync' }));
+      };
+
+      ws.onclose = () => {
+        document.getElementById('nav-status').className = 'status-pill disconnected';
+        document.getElementById('nav-status-text').textContent = 'disconnected';
+        setTimeout(connect, 2000);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      };
+    }
+
+    function handleMessage(data) {
+      if (data.type === 'init') {
+        keywords = data.keywords || [];
+        keywordConfigs = data.keywordConfigs || {};
+        columns = data.columns || {};
+        guilds = data.guilds || {};
+        channelsSeen = data.channelsSeen || [];
+        blacklistByKeyword = data.blacklistByKeyword || {};
+        renderColumns();
+      }
+      if (data.type === 'message') {
+        queueMessage(data);
+      }
+      if (data.type === 'keyword_added' || data.type === 'keyword_removed') {
+        if (data.keywords) keywords = data.keywords;
+        if (data.keywordConfigs) keywordConfigs = data.keywordConfigs;
+        renderColumns();
+      }
+    }
+
+    function renderColumns() {
+      const wrap = document.getElementById('wrap');
+      wrap.innerHTML = '';
+      keywords.forEach(kw => {
+        const col = createColumn(kw);
+        wrap.appendChild(col);
+      });
+    }
+
+    function createColumn(kw) {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `
+        <div class="colh">
+          <div class="title">${kw}</div>
+          <div class="count">${(columns[kw] || []).length}/30</div>
+        </div>
+        <div class="list"></div>
+      `;
+      const list = col.querySelector('.list');
+      const msgs = columns[kw] || [];
+      msgs.forEach(msg => {
+        list.appendChild(createMessageCard(msg, kw));
+      });
+      return col;
+    }
+
+    function createMessageCard(msg, kw) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div><strong>${msg.author?.displayName || msg.author?.username || 'User'}</strong></div>
+        <div style="margin-top:4px">${msg.content}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.channel?.name || ''}</div>
+      `;
+      return card;
+    }
+
+    // === ADD KEYWORD WITH GUILD SUPPORT ===
+    function openAddModal() {
+      const modal = document.getElementById('add-modal');
+      const guildSelect = document.getElementById('guild-select');
+      const channelSection = document.getElementById('channel-section');
+      const channelList = document.getElementById('channel-list');
+
+      modal.style.display = 'flex';
+      guildSelect.innerHTML = '';
+
+      // Populate guilds
+      Object.values(guilds).forEach(guild => {
+        const opt = document.createElement('option');
+        opt.value = guild.id;
+        opt.textContent = guild.name;
+        guildSelect.appendChild(opt);
+      });
+
+      if (Object.keys(guilds).length === 0) {
+        channelSection.style.display = 'none';
+      } else {
+        channelSection.style.display = 'block';
+        updateChannelList();
+      }
+
+      guildSelect.onchange = updateChannelList;
+
+      function updateChannelList() {
+        const selectedGuildId = guildSelect.value;
+        channelList.innerHTML = '';
+        const guild = guilds[selectedGuildId];
+        if (!guild) return;
+
+        Object.values(guild.channels || {}).forEach(ch => {
+          const label = document.createElement('label');
+          label.style.display = 'block';
+          label.innerHTML = `
+            <input type="checkbox" value="${ch.id}" checked> ${ch.name}
+          `;
+          channelList.appendChild(label);
+        });
+      }
+
+      document.getElementById('confirm-add').onclick = () => {
+        const kw = document.getElementById('kw-input').value.trim().toLowerCase();
+        if (!kw) return;
+
+        const selectedGuildId = guildSelect.value || null;
+        const selectedChannels = Array.from(channelList.querySelectorAll('input:checked')).map(el => el.value);
+
+        ws.send(JSON.stringify({
+          type: 'add_keyword',
+          keyword: kw,
+          guildId: selectedGuildId,
+          channels: selectedChannels
+        }));
+
+        modal.style.display = 'none';
+        document.getElementById('kw-input').value = '';
+      };
+
+      document.getElementById('cancel-add').onclick = () => {
+        modal.style.display = 'none';
+      };
+    }
+
+    // Event listeners
+    document.getElementById('add').onclick = openAddModal;
+
+    // Start connection
+    connect();
+  </script>
+</body>
+</html>
