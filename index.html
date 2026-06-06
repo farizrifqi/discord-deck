@@ -14,8 +14,9 @@
     .status-pill.connected .status-dot { background: #22c55e; }
     .status-pill.disconnected .status-dot, .status-pill.error .status-dot { background: #ef4444; }
     .right { margin-left: auto; display: flex; gap: 8px; }
-    .btn { border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
-    .btn:hover { background: #25282f; }
+    .btn { border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; transition: all 0.15s ease; }
+    .btn:hover { background: #25282f; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .btn:active { transform: translateY(0); }
     .main { height: calc(100vh - 56px); display: flex; }
     #wrap { flex: 1; display: flex; gap: 12px; overflow-x: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: #4b5563 transparent; }
     #wrap::-webkit-scrollbar { height: 8px; }
