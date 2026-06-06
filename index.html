@@ -131,7 +131,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <span>Add Keyword</span>
-        <button onclick="document.getElementById('add-modal').style.display='none'" class="btn" style="padding:2px 8px">×</button>
+<button onclick="document.getElementById('add-modal').style.display='none'; if (addModalInterval) { clearInterval(addModalInterval); addModalInterval = null; }" class="btn" style="padding:2px 8px">×</button>
       </div>
       <div class="modal-body">
         <input id="kw-input" placeholder="Keyword" />
