@@ -21,7 +21,7 @@
     #wrap { flex: 1; display: flex; gap: 12px; overflow-x: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: #4b5563 transparent; }
     #wrap::-webkit-scrollbar { height: 8px; }
     #wrap::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-    .col { width: 340px; min-width: 340px; background: #141518; border: 1px solid #2a2c32; border-radius: 12px; display: flex; flex-direction: column; position: relative; }
+    .col { width: 340px; min-width: 340px; background: #141518; border: 1px solid #2a2c32; border-radius: 12px; display: flex; flex-direction: column; position: relative; max-height: calc(100vh - 90px); }
     .colh { padding: 12px; border-bottom: 1px solid #2a2c32; display: flex; align-items: center; gap: 8px; cursor: grab; }
     .title { font-weight: 600; flex: 1; }
     .count { font-size: 12px; color: #9ca3af; }
@@ -303,9 +303,9 @@
       document.getElementById('cancel-add').onclick = () => modal.style.display = 'none';
     }
 
-    // Horizontal scroll with mouse wheel
+    // Horizontal scroll with mouse wheel - FIXED to allow vertical scroll inside columns
     document.getElementById('wrap').addEventListener('wheel', function(e) {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.target.closest('.list')) {
         this.scrollLeft += e.deltaY;
         e.preventDefault();
       }
@@ -313,8 +313,8 @@
 
     // Event bindings
     document.getElementById('add').onclick = openAddModal;
-    document.getElementById('btn-blacklist').onclick = openBlacklistModal;
-    document.getElementById('btn-favorites').onclick = openFavoritesModal;
+    document.getElementById('btn-blacklist').onclick = () => alert('Blacklist modal - to be implemented');
+    document.getElementById('btn-favorites').onclick = () => alert('Favorites modal - to be implemented');
     document.getElementById('btn-clear-hidden').onclick = () => { hidden.clear(); renderColumns(); };
 
     connect();
