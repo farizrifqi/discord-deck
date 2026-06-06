@@ -12,6 +12,10 @@ const state = {
   lastDiscordMessageAt: 0,
 };
 
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function normalizeKeyword(keyword = '') {
   let k = String(keyword || '').trim().toLowerCase();
   if (k.startsWith('\\"') && k.endsWith('\\"') && k.length >= 4) {
@@ -173,8 +177,8 @@ function hydratePersistent(p = {}) {
 function getPersistentSnapshot() {
   return {
     keywords: [...state.keywords],
-    keywordConfigs: state.keywordConfigs,
-    blacklistByKeyword: state.blacklistByKeyword
+    keywordConfigs: clone(state.keywordConfigs),
+    blacklistByKeyword: clone(state.blacklistByKeyword)
   };
 }
 

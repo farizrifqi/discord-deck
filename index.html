@@ -458,6 +458,48 @@
     let showHiddenTemporarily = {};
     let showBlockedTemporarily = {};
     let currentBlacklistKw = null;
+    const PREF_KEY = 'filtermessage:prefs';
+    const DEFAULT_PREFS = {
+      maxMessagesPerColumn: 30,
+      favorites: {},
+      hidden: [],
+      showHiddenTemporarily: {},
+      showBlockedTemporarily: {}
+    };
+
+    function loadPrefs() {
+      try {
+        const raw = localStorage.getItem(PREF_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return {
+          ...DEFAULT_PREFS,
+          ...parsed,
+          favorites: parsed.favorites && typeof parsed.favorites === 'object' ? parsed.favorites : {},
+          hidden: Array.isArray(parsed.hidden) ? parsed.hidden : [],
+          showHiddenTemporarily: parsed.showHiddenTemporarily && typeof parsed.showHiddenTemporarily === 'object' ? parsed.showHiddenTemporarily : {},
+          showBlockedTemporarily: parsed.showBlockedTemporarily && typeof parsed.showBlockedTemporarily === 'object' ? parsed.showBlockedTemporarily : {}
+        };
+      } catch {
+        return { ...DEFAULT_PREFS, favorites: {}, hidden: [], showHiddenTemporarily: {}, showBlockedTemporarily: {} };
+      }
+    }
+
+    function savePrefs() {
+      localStorage.setItem(PREF_KEY, JSON.stringify({
+        maxMessagesPerColumn: MAX_MESSAGES_PER_COLUMN,
+        favorites,
+        hidden: Array.from(hidden),
+        showHiddenTemporarily,
+        showBlockedTemporarily
+      }));
+    }
+
+    const savedPrefs = loadPrefs();
+    let MAX_MESSAGES_PER_COLUMN = Number.isFinite(Number(savedPrefs.maxMessagesPerColumn)) ? Number(savedPrefs.maxMessagesPerColumn) : 30;
+    favorites = savedPrefs.favorites;
+    hidden = new Set(savedPrefs.hidden);
+    showHiddenTemporarily = savedPrefs.showHiddenTemporarily;
+    showBlockedTemporarily = savedPrefs.showBlockedTemporarily;
 
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -488,22 +530,37 @@
         columns = data.columns || {};
         guilds = data.guilds || {};
         blacklistByKeyword = data.blacklistByKeyword || {};
+        if (data.persistent) {
+          favorites = data.persistent.favorites || favorites;
+          hidden = new Set(data.persistent.hidden || []);
+          showHiddenTemporarily = data.persistent.showHiddenTemporarily || {};
+          showBlockedTemporarily = data.persistent.showBlockedTemporarily || {};
+          if (Number.isFinite(Number(data.persistent.maxMessagesPerColumn))) {
+            MAX_MESSAGES_PER_COLUMN = Number(data.persistent.maxMessagesPerColumn);
+          }
+          savePrefs();
+        }
         renderColumns();
+        return;
       }
       if (data.type === 'message') {
         queueMessage(data);
+        return;
       }
       if (data.type === 'keyword_added' || data.type === 'keyword_removed') {
         if (data.keywords) keywords = data.keywords;
         if (data.keywordConfigs) keywordConfigs = data.keywordConfigs;
         renderColumns();
+        return;
       }
       if (data.type === 'guilds_updated') {
         guilds = data.guilds || guilds;
+        return;
       }
       if (data.type === 'blacklist_updated') {
         blacklistByKeyword = data.blacklistByKeyword || {};
         renderColumns();
+        return;
       }
     }
 
@@ -649,11 +706,13 @@
       } else {
         favorites[user.id] = user;
       }
+      savePrefs();
       renderColumns();
     }
 
     function hideMessage(id, btn, e) {
       hidden.add(id);
+      savePrefs();
       btn.closest('.card').remove();
     }
 
@@ -688,12 +747,14 @@
     function toggleShowHidden(kw, e) {
       e.stopImmediatePropagation();
       showHiddenTemporarily[kw] = !showHiddenTemporarily[kw];
+      savePrefs();
       renderColumns();
     }
 
     function toggleShowBlocked(kw, e) {
       e.stopImmediatePropagation();
       showBlockedTemporarily[kw] = !showBlockedTemporarily[kw];
+      savePrefs();
       renderColumns();
     }
 
@@ -710,6 +771,7 @@
         if (newValue >= 5 && newValue <= 100) {
           MAX_MESSAGES_PER_COLUMN = newValue;
           localStorage.setItem('maxMessagesPerColumn', MAX_MESSAGES_PER_COLUMN);
+          savePrefs();
           modal.style.display = 'none';
           renderColumns();
         } else {
@@ -926,7 +988,7 @@
     document.getElementById('btn-blacklist').onclick = openBlacklistModal;
     document.getElementById('btn-favorites').onclick = openFavoritesModal;
     document.getElementById('btn-settings').onclick = openSettingsModal;
-    document.getElementById('btn-clear-hidden').onclick = () => { hidden.clear(); renderColumns(); };
+    document.getElementById('btn-clear-hidden').onclick = () => { hidden.clear(); savePrefs(); renderColumns(); };
 
     // Horizontal scroll with wheel
     document.getElementById('wrap').addEventListener('wheel', function(e) {
