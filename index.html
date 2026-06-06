@@ -363,6 +363,7 @@
       <button id="add" class="btn">+ Keyword</button>
       <button id="btn-blacklist" class="btn">Blacklist</button>
       <button id="btn-favorites" class="btn">Favorites</button>
+      <button id="btn-settings" class="btn">Settings</button>
       <button id="btn-clear-hidden" class="btn">Clear Hidden</button>
     </div>
   </header>
@@ -396,6 +397,29 @@
     </div>
   </div>
 
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Settings</span>
+        <button onclick="document.getElementById('settings-modal').style.display='none'" class="btn" style="padding:2px 8px">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 16px;">
+          <label style="display:block; margin-bottom:6px; font-size:13px; color:#9ca3af;">
+            Maximum messages per column
+          </label>
+          <input type="number" id="max-messages-input" min="5" max="100" step="5" style="width:100px;" />
+        </div>
+        
+        <div style="margin-top:24px; display:flex; gap:10px; justify-content:flex-end;">
+          <button id="cancel-settings" class="btn">Cancel</button>
+          <button id="save-settings" class="btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Favorites Modal -->
   <div id="fav-modal" class="modal">
     <div class="modal-content">
@@ -423,6 +447,11 @@
   </div>
 
   <script>
+    // Default max messages per column
+    let MAX_MESSAGES_PER_COLUMN = localStorage.getItem('maxMessagesPerColumn') 
+      ? parseInt(localStorage.getItem('maxMessagesPerColumn')) 
+      : 30;
+
     let ws, keywords = [], keywordConfigs = {}, columns = {}, guilds = {}, blacklistByKeyword = {}, favorites = {}, hidden = new Set();
     let showHiddenTemporarily = {};
     let showBlockedTemporarily = {};
@@ -497,7 +526,7 @@
         <div class="colh" draggable="true">
           <div class="colh-top">
             <div class="title">${kw}</div>
-            <div class="count">${(columns[kw] || []).length}/30</div>
+            <div class="count">${(columns[kw] || []).length}/${MAX_MESSAGES_PER_COLUMN}</div>
             <button class="btn close-btn" onclick="removeKeyword('${kw}', event)">×</button>
           </div>
           
@@ -561,21 +590,17 @@
       if (isBlocked && showBlockedTemporarily[kw]) card.classList.add('blocked');
       if (isHidden && showHiddenTemporarily[kw]) card.classList.add('hidden');
 
-      // Author line
       const authorDiv = document.createElement('div');
       authorDiv.innerHTML = `<strong>${msg.author?.displayName || msg.author?.username}</strong> <span style="color:#9ca3af;font-size:11px;">${time}</span>`;
 
-      // Content line
       const contentDiv = document.createElement('div');
       contentDiv.style.cssText = 'margin-top:4px; user-select: text; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;';
       contentDiv.textContent = msg.content || '';
 
-      // Channel/Guild line
       const metaDiv = document.createElement('div');
       metaDiv.style.cssText = 'font-size:11px;color:#9ca3af;margin-top:6px';
       metaDiv.textContent = `${msg.guild?.name || ''} • ${msg.channel?.name || ''}`;
 
-      // Actions
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'card-actions';
       actionsDiv.innerHTML = `
@@ -590,7 +615,6 @@
       card.appendChild(metaDiv);
       card.appendChild(actionsDiv);
 
-      // Attach events
       actionsDiv.querySelector('.btn-fav').onclick = (e) => {
         e.stopImmediatePropagation();
         const author = { id: msg.author.id, username: msg.author.username, displayName: msg.author.displayName };
@@ -648,7 +672,7 @@
         if (!keywords.includes(kw)) return;
         columns[kw] = columns[kw] || [];
         columns[kw].unshift(msg);
-        if (columns[kw].length > 30) columns[kw].pop();
+        if (columns[kw].length > MAX_MESSAGES_PER_COLUMN) columns[kw].pop();
       });
       renderColumns();
     }
@@ -669,6 +693,31 @@
       e.stopImmediatePropagation();
       showBlockedTemporarily[kw] = !showBlockedTemporarily[kw];
       renderColumns();
+    }
+
+    // ==================== SETTINGS MODAL ====================
+    function openSettingsModal() {
+      const modal = document.getElementById('settings-modal');
+      const input = document.getElementById('max-messages-input');
+      
+      input.value = MAX_MESSAGES_PER_COLUMN;
+      modal.style.display = 'flex';
+
+      document.getElementById('save-settings').onclick = () => {
+        const newValue = parseInt(input.value);
+        if (newValue >= 5 && newValue <= 100) {
+          MAX_MESSAGES_PER_COLUMN = newValue;
+          localStorage.setItem('maxMessagesPerColumn', MAX_MESSAGES_PER_COLUMN);
+          modal.style.display = 'none';
+          renderColumns();
+        } else {
+          alert("Please enter a value between 5 and 100");
+        }
+      };
+
+      document.getElementById('cancel-settings').onclick = () => {
+        modal.style.display = 'none';
+      };
     }
 
     // ==================== ADD KEYWORD MODAL ====================
@@ -874,6 +923,7 @@
     document.getElementById('add').onclick = openAddModal;
     document.getElementById('btn-blacklist').onclick = openBlacklistModal;
     document.getElementById('btn-favorites').onclick = openFavoritesModal;
+    document.getElementById('btn-settings').onclick = openSettingsModal;
     document.getElementById('btn-clear-hidden').onclick = () => { hidden.clear(); renderColumns(); };
 
     // Horizontal scroll with wheel
