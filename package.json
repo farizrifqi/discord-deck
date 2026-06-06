@@ -11,7 +11,13 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "app": "electron .",
-    "build:win": "electron-builder --win portable"
+    "build:win": "electron-builder --win portable",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"],
+    "forceExit": true
   },
   "dependencies": {
     "@discordjs/voice": "^0.17.0",
@@ -21,9 +27,11 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "electron": "^31.7.7",
     "electron-builder": "^24.13.3",
-    "nodemon": "^3.1.4",
-    "electron": "^31.7.7"
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "nodemon": "^3.1.4"
   },
   "build": {
     "appId": "com.discorddeck.app",
