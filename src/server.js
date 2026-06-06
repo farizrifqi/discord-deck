@@ -102,10 +102,18 @@ wss.on('connection', (ws) => {
     if (data.type === 'resync') return ws.send(JSON.stringify(fullInit()));
 
     if (data.type === 'hydrate') {
-      if (data.persistent) {
+      const hasServerPersistentState =
+        state.keywords.length > 0 ||
+        Object.keys(state.keywordConfigs).length > 0 ||
+        Object.keys(state.blacklistByKeyword).length > 0;
+
+      if (data.persistent && !hasServerPersistentState) {
         hydratePersistent(data.persistent);
-        ws.send(JSON.stringify(fullInit()));
+        broadcast(fullInit());
+        return;
       }
+
+      ws.send(JSON.stringify(fullInit()));
       return;
     }
 
