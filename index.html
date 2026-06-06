@@ -26,19 +26,16 @@
       padding: 10px 12px; 
       border-bottom: 1px solid #2a2c32; 
       display: flex; 
-      align-items: center; 
-      gap: 8px; 
+      flex-direction: column;
+      gap: 6px; 
       cursor: grab; 
       user-select: none;
-      flex-wrap: wrap;
     }
     
-    .colh-main {
+    .colh-top {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex: 1;
-      min-width: 0;
     }
     
     .title { 
@@ -59,7 +56,7 @@
     .col-options {
       display: flex;
       gap: 4px;
-      flex-shrink: 0;
+      flex-wrap: wrap;
     }
     
     .col-options button {
@@ -253,18 +250,20 @@
 
       col.innerHTML = `
         <div class="colh" draggable="true">
-          <div class="colh-main">
+          <!-- Top row: Title + Count + Close -->
+          <div class="colh-top">
             <div class="title">${kw}</div>
             <div class="count">${(columns[kw] || []).length}/30</div>
+            <button class="btn close-btn" onclick="removeKeyword('${kw}', event)">×</button>
           </div>
           
+          <!-- Bottom row: Toggle buttons -->
           <div class="col-options">
             <button class="btn" onclick="toggleShowHidden('${kw}', event)">${showHiddenText}</button>
             <button class="btn" onclick="toggleShowBlocked('${kw}', event)">${showBlockedText}</button>
           </div>
-          
-          <button class="btn close-btn" onclick="removeKeyword('${kw}', event)">×</button>
         </div>
+        
         <div class="list"></div>
       `;
 
