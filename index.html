@@ -28,20 +28,19 @@
     .list::-webkit-scrollbar { width: 6px; }
     .list::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     .card { background: #1b1f26; border: 1px solid #2a2c32; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; position: relative; }
+    .card.favorited { border-color: #facc15; box-shadow: 0 0 0 1px #facc15; }
+    .card.blocked { border-color: #ef4444; box-shadow: 0 0 0 1px #ef4444; }
+    .card.hidden { border-color: #f87171; box-shadow: 0 0 0 1px #f87171; }
     .card-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; position: relative; z-index: 10; }
     .card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; pointer-events: auto; transition: all 0.15s ease; }
     .card-actions button:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-    /* Button Colors */
     .btn-fav { background: #c2410c; border-color: #9a3412; color: #fed7aa; }
     .btn-fav:hover { background: #9a3412; }
-    
     .btn-hide { background: #374151; border-color: #4b5563; color: #d1d5db; }
     .btn-hide:hover { background: #4b5563; }
-    
     .btn-block { background: #991b1b; border-color: #7f1d1d; color: #fecaca; }
     .btn-block:hover { background: #7f1d1d; }
-    
     .btn-copy { background: #1e40af; border-color: #1e3a8a; color: #dbeafe; }
     .btn-copy:hover { background: #1e3a8a; }
 
@@ -51,30 +50,15 @@
     .modal-header { padding: 14px 18px; border-bottom: 1px solid #2a2c32; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
     .modal-body { padding: 16px; }
     select, input { width: 100%; padding: 8px; background: #0f1318; border: 1px solid #2a2c32; color: #e5e7eb; border-radius: 6px; margin-bottom: 10px; }
-    
     .channel-list { max-height: 220px; overflow-y: auto; border: 1px solid #2a2c32; border-radius: 8px; padding: 8px; background: #0f1318; }
-    .channel-item { 
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-      padding: 8px 10px; 
-      border-radius: 6px; 
-      margin-bottom: 4px;
-      transition: background 0.1s;
-    }
+    .channel-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 4px; transition: background 0.1s; }
     .channel-item:hover { background: #1a1c20; }
-    .channel-item input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: #3b82f6;
-    }
-    .channel-item span {
-      flex: 1;
-      font-size: 13px;
-    }
-
+    .channel-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: #3b82f6; }
+    .channel-item span { flex: 1; font-size: 13px; }
     .user-list { max-height: 300px; overflow-y: auto; }
     .user-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2c32; }
+    .col-options { display: flex; gap: 4px; margin-left: auto; }
+    .col-options button { font-size: 10px; padding: 2px 6px; }
   </style>
 </head>
 <body>
@@ -146,8 +130,9 @@
 
   <script>
     let ws, keywords = [], keywordConfigs = {}, columns = {}, guilds = {}, blacklistByKeyword = {}, favorites = {}, hidden = new Set();
+    let showHiddenTemporarily = {};
+    let showBlockedTemporarily = {};
     let currentBlacklistKw = null;
-    let isHoveringChannelList = false;
 
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -190,10 +175,6 @@
       }
       if (data.type === 'guilds_updated') {
         guilds = data.guilds || guilds;
-        const addModal = document.getElementById('add-modal');
-        if (addModal.style.display === 'flex' && !isHoveringChannelList) {
-          refreshAddModalLists();
-        }
       }
       if (data.type === 'blacklist_updated') {
         blacklistByKeyword = data.blacklistByKeyword || {};
@@ -215,10 +196,17 @@
       col.className = 'col';
       col.dataset.kw = kw;
 
+      const showHidden = showHiddenTemporarily[kw] ? 'Hide Hidden' : 'Show Hidden';
+      const showBlocked = showBlockedTemporarily[kw] ? 'Hide Blocked' : 'Show Blocked';
+
       col.innerHTML = `
         <div class="colh" draggable="true">
           <div class="title">${kw}</div>
           <div class="count">${(columns[kw] || []).length}/30</div>
+          <div class="col-options">
+            <button class="btn" style="font-size:9px;padding:1px 5px" onclick="toggleShowHidden('${kw}', event)">${showHidden}</button>
+            <button class="btn" style="font-size:9px;padding:1px 5px" onclick="toggleShowBlocked('${kw}', event)">${showBlocked}</button>
+          </div>
           <button class="btn" style="padding:1px 8px;font-size:12px" onclick="removeKeyword('${kw}', event)">×</button>
         </div>
         <div class="list"></div>
@@ -227,7 +215,13 @@
       const header = col.querySelector('.colh');
       const list = col.querySelector('.list');
 
-      (columns[kw] || []).forEach(msg => list.appendChild(createMessageCard(msg, kw)));
+      const msgs = columns[kw] || [];
+      msgs.forEach(msg => {
+        const shouldShow = shouldShowMessage(msg, kw);
+        if (shouldShow) {
+          list.appendChild(createMessageCard(msg, kw));
+        }
+      });
 
       header.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', kw);
@@ -248,15 +242,28 @@
       return col;
     }
 
+    function shouldShowMessage(msg, kw) {
+      const authorId = msg.author?.id;
+      const isHidden = hidden.has(msg.id);
+      const isBlocked = blacklistByKeyword[kw]?.[authorId];
+
+      if (isHidden && !showHiddenTemporarily[kw]) return false;
+      if (isBlocked && !showBlockedTemporarily[kw]) return false;
+
+      return true;
+    }
+
     function createMessageCard(msg, kw) {
       const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-      
+      const isFavorited = favorites[msg.author?.id];
+      const isBlocked = blacklistByKeyword[kw]?.[msg.author?.id];
+      const isHidden = hidden.has(msg.id);
+
       const card = document.createElement('div');
       card.className = 'card';
-      card.dataset.authorId = msg.author?.id || '';
-      card.dataset.authorUsername = msg.author?.username || '';
-      card.dataset.authorDisplayName = msg.author?.displayName || msg.author?.username || '';
-      card.dataset.kw = kw;
+      if (isFavorited) card.classList.add('favorited');
+      if (isBlocked && showBlockedTemporarily[kw]) card.classList.add('blocked');
+      if (isHidden && showHiddenTemporarily[kw]) card.classList.add('hidden');
 
       card.innerHTML = `
         <div><strong>${msg.author?.displayName || msg.author?.username}</strong> <span style="color:#9ca3af;font-size:11px;">${time}</span></div>
@@ -277,11 +284,7 @@
 
       favBtn.onclick = (e) => {
         e.stopImmediatePropagation();
-        const author = {
-          id: card.dataset.authorId,
-          username: card.dataset.authorUsername,
-          displayName: card.dataset.authorDisplayName
-        };
+        const author = { id: msg.author.id, username: msg.author.username, displayName: msg.author.displayName };
         toggleFavorite(author, e);
       };
 
@@ -292,11 +295,7 @@
 
       blockBtn.onclick = (e) => {
         e.stopImmediatePropagation();
-        const author = {
-          id: card.dataset.authorId,
-          username: card.dataset.authorUsername,
-          displayName: card.dataset.authorDisplayName
-        };
+        const author = { id: msg.author.id, username: msg.author.username, displayName: msg.author.displayName };
         blockUser(kw, author, e);
       };
 
@@ -351,8 +350,21 @@
       ws.send(JSON.stringify({ type: 'remove_keyword', keyword: kw }));
     }
 
-    // ==================== ADD KEYWORD MODAL (Improved Channel List) ====================
+    function toggleShowHidden(kw, e) {
+      e.stopImmediatePropagation();
+      showHiddenTemporarily[kw] = !showHiddenTemporarily[kw];
+      renderColumns();
+    }
+
+    function toggleShowBlocked(kw, e) {
+      e.stopImmediatePropagation();
+      showBlockedTemporarily[kw] = !showBlockedTemporarily[kw];
+      renderColumns();
+    }
+
+    // ==================== ADD KEYWORD MODAL ====================
     let addModalInterval = null;
+    let isHoveringChannelList = false;
 
     function openAddModal() {
       const modal = document.getElementById('add-modal');
@@ -377,7 +389,6 @@
 
       guildSelect.onchange = updateChannelList;
 
-      // Pause refresh while hovering on channel list
       channelList.onmouseenter = () => { isHoveringChannelList = true; };
       channelList.onmouseleave = () => { isHoveringChannelList = false; };
 
@@ -410,11 +421,8 @@
       const channelList = document.getElementById('channel-list');
       const currentGuild = guildSelect.value;
 
-      // Save current checked state
       const checkedChannels = new Set();
-      channelList.querySelectorAll('input:checked').forEach(el => {
-        checkedChannels.add(el.value);
-      });
+      channelList.querySelectorAll('input:checked').forEach(el => checkedChannels.add(el.value));
 
       guildSelect.innerHTML = '';
       Object.values(guilds).forEach(g => {
@@ -440,17 +448,11 @@
       Object.values(g.channels || {}).forEach(ch => {
         const div = document.createElement('div');
         div.className = 'channel-item';
-
-        // Determine if this channel should be checked
         let isChecked = true;
         if (preservedChecked !== null) {
           isChecked = preservedChecked.has(ch.id);
         }
-
-        div.innerHTML = `
-          <input type="checkbox" value="${ch.id}" ${isChecked ? 'checked' : ''}>
-          <span>${ch.name}</span>
-        `;
+        div.innerHTML = `<input type="checkbox" value="${ch.id}" ${isChecked ? 'checked' : ''}> <span>${ch.name}</span>`;
         channelList.appendChild(div);
       });
     }
