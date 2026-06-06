@@ -1,54 +1,61 @@
-# Web/Coding Agent (Discord Deck)
+# Web/Coding Agent - DiscordDeck
 
-## Purpose
-You are responsible for implementing and stabilizing the Discord Deck web app.
-Focus on reliable behavior, maintainable edits, and regression-safe delivery.
+## Project Overview
+DiscordDeck is a TweetDeck-style real-time Discord message monitor with multi-guild support.
 
-## Scope
-- Frontend: `index.html`, `values.html`
-- Backend: `src/server.js`, `src/state.js`
-- Data: `data/values.json`
-- Build/runtime scripts where needed.
+## Core Features (Must Preserve)
 
-## Working Principles
-1. Prefer coherent edits over fragile micro-patches when file state is unstable.
-2. Preserve existing working features unless explicitly replaced.
-3. Keep UI and state logic synchronized (avoid stale-state UI bugs).
-4. Prioritize deterministic behavior over flashy complexity.
+### Multi-Guild & Dynamic Channels
+- Guilds and channels are discovered dynamically from incoming messages (no static `.env` config)
+- Frontend supports guild-first selection when adding keywords
+- Channel list preserves user selection state when new channels appear
+- Real-time guild/channel updates while "Add Keyword" modal is open
 
-## Known Critical Features to Preserve
-- Realtime message stream with websocket
-- Keyword columns + per-column options
-- Favorites system + Favorites column
-- Blacklist per keyword + modal management
-- New-message pill when scrolled down
-- Reconnect/disconnect overlay + navbar state
-- Draggable columns with persisted order
-- Values page with search/sort + quest tracker
+### Keyword Columns
+- Each keyword gets its own draggable column
+- Per-column options: Show/Hide Hidden messages, Show/Hide Blocked messages
+- Columns support drag & drop reordering
 
-## Bug Handling Protocol
-For each reported bug:
-1. Reproduce hypothesis from user symptom
-2. Identify state boundary (DOM-only vs state-only vs ws event)
-3. Patch minimally but safely
-4. Add quick verification steps for user
+### Message Cards
+- Real-time message streaming via WebSocket
+- Timestamp on every message
+- **Favorited users** → Yellow border (global across all keywords)
+- **Temporarily shown blocked/hidden messages** → Red border
+- Per-message actions: Favorite, Hide, Block, Copy
 
-## UI/UX Standards
-- Keep controls visually consistent.
-- Use icon buttons only when discoverable (title/tooltips).
-- Avoid overlapping fixed elements with content columns.
-- Ensure horizontal scroll layouts do not break sticky/fixed side controls.
+### Favorites System (Global)
+- Favoriting a user shows their messages with yellow border in **all** keyword columns
+- Dedicated Favorites modal with ability to unfavorite individually or all at once
 
-## Data Safety
-- Do not lose user-maintained value data.
-- When changing data shape, provide migration or backward compatibility.
+### Blacklist System (Per-Keyword)
+- Blocking a user only affects that specific keyword
+- Dedicated Blacklist modal with per-keyword management
+- Option to temporarily show blocked messages per column
 
-## Delivery Format
-After implementation, always provide:
-1. What changed
-2. Where changed (files)
-3. How to test quickly
-4. Any known caveat
+### Hidden Messages
+- Hide individual messages
+- Per-column toggle to temporarily show hidden messages (red border)
 
-## Escalation Rule
-If repeated patching causes drift, perform a single full-file rewrite with preserved feature checklist.
+### Channel Selection (Add Keyword Modal)
+- Multi-select channel list with preserved state on refresh
+- Auto-pauses refresh while user is hovering on the channel list
+- Real-time update of available channels without closing the modal
+
+## Important Technical Details
+
+- WebSocket connection must be stable (`resync`, `init`, `message`, `guilds_updated`, `blacklist_updated`)
+- `state.guilds` structure must be maintained on backend
+- `favorites` is global, while `blacklistByKeyword` is per-keyword
+- `showHiddenTemporarily` and `showBlockedTemporarily` are per-keyword
+
+## UI/UX Rules
+- Buttons must have distinct colors:
+  - Favorite → Orange/Yellow
+  - Block → Red
+  - Hide → Gray
+  - Copy → Blue
+- All action buttons must have hover effects
+- Message content must remain selectable
+- Channel checkboxes must preserve state when list refreshes
+
+Last Updated: 2026-06-06
