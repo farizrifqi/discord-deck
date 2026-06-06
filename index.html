@@ -30,18 +30,18 @@
     .card { background: #1b1f26; border: 1px solid #2a2c32; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; position: relative; }
     .card-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; position: relative; z-index: 10; }
     .card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; pointer-events: auto; transition: all 0.15s ease; }
-    .card-actions button:hover { transform: translateY(-1px); }
+    .card-actions button:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-    /* Button colors */
-    .btn-fav { background: #854d0e; border-color: #a16207; color: #fef08c; }
-    .btn-fav:hover { background: #a16207; }
+    /* Button Colors */
+    .btn-fav { background: #c2410c; border-color: #9a3412; color: #fed7aa; }      /* Orange/Yellow */
+    .btn-fav:hover { background: #9a3412; }
     
     .btn-hide { background: #374151; border-color: #4b5563; color: #d1d5db; }
     .btn-hide:hover { background: #4b5563; }
     
-    .btn-block { background: #7f1d1d; border-color: #991b1b; color: #fecaca; }
-    .btn-block:hover { background: #991b1b; }
-
+    .btn-block { background: #991b1b; border-color: #7f1d1d; color: #fecaca; }     /* Red */
+    .btn-block:hover { background: #7f1d1d; }
+    
     .btn-copy { background: #1e40af; border-color: #1e3a8a; color: #dbeafe; }
     .btn-copy:hover { background: #1e3a8a; }
 
@@ -51,8 +51,29 @@
     .modal-header { padding: 14px 18px; border-bottom: 1px solid #2a2c32; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
     .modal-body { padding: 16px; }
     select, input { width: 100%; padding: 8px; background: #0f1318; border: 1px solid #2a2c32; color: #e5e7eb; border-radius: 6px; margin-bottom: 10px; }
-    .channel-list { max-height: 200px; overflow-y: auto; border: 1px solid #2a2c32; border-radius: 6px; padding: 8px; background: #0f1318; }
-    .channel-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+    
+    /* Improved Channel List */
+    .channel-list { max-height: 220px; overflow-y: auto; border: 1px solid #2a2c32; border-radius: 8px; padding: 8px; background: #0f1318; }
+    .channel-item { 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      padding: 8px 10px; 
+      border-radius: 6px; 
+      margin-bottom: 4px;
+      transition: background 0.1s;
+    }
+    .channel-item:hover { background: #1a1c20; }
+    .channel-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #3b82f6;
+    }
+    .channel-item span {
+      flex: 1;
+      font-size: 13px;
+    }
+
     .user-list { max-height: 300px; overflow-y: auto; }
     .user-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2c32; }
   </style>
@@ -228,10 +249,12 @@
     }
 
     function createMessageCard(msg, kw) {
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+      
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <div><strong>${msg.author?.displayName || msg.author?.username}</strong></div>
+        <div><strong>${msg.author?.displayName || msg.author?.username}</strong> <span style="color:#9ca3af;font-size:11px;">${time}</span></div>
         <div style="margin-top:4px; user-select: text;">${msg.content}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
         <div class="card-actions">
@@ -371,7 +394,10 @@
       Object.values(g.channels || {}).forEach(ch => {
         const div = document.createElement('div');
         div.className = 'channel-item';
-        div.innerHTML = `<input type="checkbox" value="${ch.id}" checked> <span>${ch.name}</span>`;
+        div.innerHTML = `
+          <input type="checkbox" value="${ch.id}" checked>
+          <span>${ch.name}</span>
+        `;
         channelList.appendChild(div);
       });
     }
