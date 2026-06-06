@@ -360,11 +360,11 @@
     <div class="logo">DiscordDeck</div>
     <div id="nav-status" class="status-pill"><div class="status-dot"></div><span id="nav-status-text">connecting</span></div>
     <div class="right">
-      <button id="add" class="btn">+ Keyword</button>
-      <button id="btn-blacklist" class="btn">Blacklist</button>
-      <button id="btn-favorites" class="btn">Favorites</button>
-      <button id="btn-settings" class="btn">Settings</button>
-      <button id="btn-clear-hidden" class="btn">Clear Hidden</button>
+      <button id="add" class="btn" title="Add Keyword">➕ Keyword</button>
+      <button id="btn-blacklist" class="btn" title="Manage Blacklist">🚫 Blacklist</button>
+      <button id="btn-favorites" class="btn" title="Manage Favorites">⭐ Favorites</button>
+      <button id="btn-settings" class="btn" title="Open Settings">⚙️ Settings</button>
+      <button id="btn-clear-hidden" class="btn" title="Clear All Hidden Messages">🗑️ Clear Hidden</button>
     </div>
   </header>
 
@@ -519,8 +519,8 @@
       col.className = 'col';
       col.dataset.kw = kw;
 
-      const showHiddenText = showHiddenTemporarily[kw] ? 'Hide Hidden' : 'Show Hidden';
-      const showBlockedText = showBlockedTemporarily[kw] ? 'Hide Blocked' : 'Show Blocked';
+      const showHiddenText = showHiddenTemporarily[kw] ? '🙈 Hide Hidden' : '👁️ Show Hidden';
+      const showBlockedText = showBlockedTemporarily[kw] ? '🚫 Hide Blocked' : '🚫 Show Blocked';
 
       col.innerHTML = `
         <div class="colh" draggable="true">
