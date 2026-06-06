@@ -33,13 +33,13 @@
     .card-actions button:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
     /* Button Colors */
-    .btn-fav { background: #c2410c; border-color: #9a3412; color: #fed7aa; }      /* Orange/Yellow */
+    .btn-fav { background: #c2410c; border-color: #9a3412; color: #fed7aa; }
     .btn-fav:hover { background: #9a3412; }
     
     .btn-hide { background: #374151; border-color: #4b5563; color: #d1d5db; }
     .btn-hide:hover { background: #4b5563; }
     
-    .btn-block { background: #991b1b; border-color: #7f1d1d; color: #fecaca; }     /* Red */
+    .btn-block { background: #991b1b; border-color: #7f1d1d; color: #fecaca; }
     .btn-block:hover { background: #7f1d1d; }
     
     .btn-copy { background: #1e40af; border-color: #1e3a8a; color: #dbeafe; }
@@ -52,7 +52,6 @@
     .modal-body { padding: 16px; }
     select, input { width: 100%; padding: 8px; background: #0f1318; border: 1px solid #2a2c32; color: #e5e7eb; border-radius: 6px; margin-bottom: 10px; }
     
-    /* Improved Channel List */
     .channel-list { max-height: 220px; overflow-y: auto; border: 1px solid #2a2c32; border-radius: 8px; padding: 8px; background: #0f1318; }
     .channel-item { 
       display: flex; 
@@ -253,22 +252,63 @@
       
       const card = document.createElement('div');
       card.className = 'card';
+      card.dataset.authorId = msg.author?.id || '';
+      card.dataset.authorUsername = msg.author?.username || '';
+      card.dataset.authorDisplayName = msg.author?.displayName || msg.author?.username || '';
+      card.dataset.kw = kw;
+
       card.innerHTML = `
         <div><strong>${msg.author?.displayName || msg.author?.username}</strong> <span style="color:#9ca3af;font-size:11px;">${time}</span></div>
         <div style="margin-top:4px; user-select: text;">${msg.content}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
         <div class="card-actions">
-          <button class="btn-fav" onclick="toggleFavorite(${JSON.stringify(msg.author)}, event)">★ Fav</button>
-          <button class="btn-hide" onclick="hideMessage('${msg.id}', this, event)">Hide</button>
-          <button class="btn-block" onclick="blockUser('${kw}', ${JSON.stringify(msg.author)}, event)">Block</button>
-          <button class="btn-copy" onclick="copyMessage(this, event)">Copy</button>
+          <button class="btn-fav" data-action="fav">★ Fav</button>
+          <button class="btn-hide" data-action="hide">Hide</button>
+          <button class="btn-block" data-action="block">Block</button>
+          <button class="btn-copy" data-action="copy">Copy</button>
         </div>
       `;
+
+      // Attach event listeners
+      const favBtn = card.querySelector('.btn-fav');
+      const hideBtn = card.querySelector('.btn-hide');
+      const blockBtn = card.querySelector('.btn-block');
+      const copyBtn = card.querySelector('.btn-copy');
+
+      favBtn.onclick = (e) => {
+        e.stopImmediatePropagation();
+        const author = {
+          id: card.dataset.authorId,
+          username: card.dataset.authorUsername,
+          displayName: card.dataset.authorDisplayName
+        };
+        toggleFavorite(author, e);
+      };
+
+      hideBtn.onclick = (e) => {
+        e.stopImmediatePropagation();
+        hideMessage(msg.id, hideBtn, e);
+      };
+
+      blockBtn.onclick = (e) => {
+        e.stopImmediatePropagation();
+        const author = {
+          id: card.dataset.authorId,
+          username: card.dataset.authorUsername,
+          displayName: card.dataset.authorDisplayName
+        };
+        blockUser(kw, author, e);
+      };
+
+      copyBtn.onclick = (e) => {
+        e.stopImmediatePropagation();
+        copyMessage(copyBtn, e);
+      };
+
       return card;
     }
 
     function toggleFavorite(user, e) {
-      e.stopImmediatePropagation();
       if (!user?.id) return;
       if (favorites[user.id]) {
         delete favorites[user.id];
@@ -279,19 +319,16 @@
     }
 
     function hideMessage(id, btn, e) {
-      e.stopImmediatePropagation();
       hidden.add(id);
       btn.closest('.card').remove();
     }
 
     function blockUser(kw, user, e) {
-      e.stopImmediatePropagation();
       if (!user?.id) return;
       ws.send(JSON.stringify({ type: 'blacklist_user', keyword: kw, user }));
     }
 
     function copyMessage(btn, e) {
-      e.stopImmediatePropagation();
       const text = btn.closest('.card').innerText;
       navigator.clipboard.writeText(text);
       btn.textContent = 'Copied!';
@@ -394,10 +431,7 @@
       Object.values(g.channels || {}).forEach(ch => {
         const div = document.createElement('div');
         div.className = 'channel-item';
-        div.innerHTML = `
-          <input type="checkbox" value="${ch.id}" checked>
-          <span>${ch.name}</span>
-        `;
+        div.innerHTML = `<input type="checkbox" value="${ch.id}" checked> <span>${ch.name}</span>`;
         channelList.appendChild(div);
       });
     }
