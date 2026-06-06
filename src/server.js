@@ -160,6 +160,7 @@ startDiscord({
     const payload = messageToPayload(message);
     if (payload) {
       state.lastDiscordMessageAt = Date.now();
+    broadcast({ type: "guilds_updated", guilds: state.guilds });
       payload.keywords.forEach((kw) => pushMessageForKeyword(kw, payload));
       broadcast(payload);
     }
