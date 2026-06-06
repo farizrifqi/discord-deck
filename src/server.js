@@ -4,9 +4,16 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const { startDiscord } = require('./discord');
 const {
-  state, setInitialKeywords, addKeyword, updateKeywordConfig, removeKeyword,
-  setBlacklistForKeyword, getMatchingKeywords, pushMessageForKeyword,
-  hydratePersistent, getPersistentSnapshot
+  state,
+  setInitialKeywords,
+  addKeyword,
+  updateKeywordConfig,
+  removeKeyword,
+  setBlacklistForKeyword,
+  createPersistentState,
+  getMatchingKeywordsForPersistent,
+  hydratePersistent,
+  getPersistentSnapshot
 } = require('./state');
 
 const PORT = Number(process.env.PORT || 2607);
@@ -40,32 +47,42 @@ const wss = new WebSocketServer({ server });
 
 function broadcast(payload) {
   const data = JSON.stringify(payload);
-  for (const c of wss.clients) if (c.readyState === 1) c.send(data);
+  for (const c of wss.clients) {
+    if (c.readyState === 1) c.send(data);
+  }
 }
 
-function fullInit() {
+function getClientPersistent(ws) {
+  if (!ws.clientPersistent) {
+    ws.clientPersistent = getPersistentSnapshot();
+  }
+  return ws.clientPersistent;
+}
+
+function fullInit(ws) {
+  const persistent = getClientPersistent(ws);
   return {
     type: 'init',
-    keywords: state.keywords,
-    keywordConfigs: state.keywordConfigs,
-    columns: state.columns,
+    keywords: persistent.keywords,
+    keywordConfigs: persistent.keywordConfigs,
+    columns: {},
     guilds: state.guilds,
     channelsSeen: Object.values(state.channelsSeen),
-    blacklistByKeyword: state.blacklistByKeyword,
+    blacklistByKeyword: persistent.blacklistByKeyword,
     status: state.status,
     tag: state.tag,
     lastDiscordMessageAt: state.lastDiscordMessageAt,
-    persistent: getPersistentSnapshot()
+    persistent
   };
 }
 
-function messageToPayload(message) {
+function messageToPayload(message, persistent) {
   const content = message.content || '';
   const channelId = message.channel.id;
   const authorId = message.author.id;
   const guild = message.guild;
 
-  const matchedKeywords = getMatchingKeywords(content, channelId, authorId);
+  const matchedKeywords = getMatchingKeywordsForPersistent(persistent, content, channelId, authorId);
   if (!matchedKeywords.length) return null;
 
   return {
@@ -93,31 +110,34 @@ function messageToPayload(message) {
 }
 
 wss.on('connection', (ws) => {
-  ws.send(JSON.stringify(fullInit()));
+  ws.clientPersistent = getPersistentSnapshot();
+  ws.send(JSON.stringify(fullInit(ws)));
 
   ws.on('message', (raw) => {
     let data;
     try { data = JSON.parse(raw.toString()); } catch { return; }
 
-    if (data.type === 'resync') return ws.send(JSON.stringify(fullInit()));
-
-    if (data.type === 'hydrate') {
-      if (data.persistent) {
-        hydratePersistent(data.persistent);
-        ws.send(JSON.stringify(fullInit()));
-      }
-      return;
+    if (data.type === 'resync') {
+      return ws.send(JSON.stringify(fullInit(ws)));
     }
 
+    if (data.type === 'hydrate') {
+      ws.clientPersistent = createPersistentState(data.persistent || {});
+      return ws.send(JSON.stringify(fullInit(ws)));
+    }
+
+    // Legacy global handlers retained for compatibility with older clients.
     if (data.type === 'add_keyword') {
       const created = addKeyword(data.keyword || '', data.channels || [], data.guildId || null);
       if (!created) return;
+      hydratePersistent(getPersistentSnapshot());
       return broadcast({ type: 'keyword_added', keyword: created, keywords: state.keywords, keywordConfigs: state.keywordConfigs, persistent: getPersistentSnapshot() });
     }
 
     if (data.type === 'update_keyword_config') {
       const cfg = updateKeywordConfig(data.keyword || '', data.patch || {});
       if (!cfg) return;
+      hydratePersistent(getPersistentSnapshot());
       return broadcast({ type: 'keyword_config_updated', keyword: data.keyword, keywordConfigs: state.keywordConfigs, persistent: getPersistentSnapshot() });
     }
 
@@ -128,7 +148,7 @@ wss.on('connection', (ws) => {
     }
 
     if (data.type === 'blacklist_user') {
-      const blocked = data.blocked !== false; // default true, or use flag if provided
+      const blocked = data.blocked !== false;
       setBlacklistForKeyword(data.keyword || '', data.user, blocked);
       return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword, persistent: getPersistentSnapshot() });
     }
@@ -140,7 +160,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Start Discord (no longer requires single guild)
 startDiscord({
   token: DISCORD_TOKEN,
   onStatus: (s) => {
@@ -149,12 +168,14 @@ startDiscord({
     broadcast({ type: 'status', ...s });
   },
   onMatchedMessage: (message) => {
-    const payload = messageToPayload(message);
-    if (payload) {
-      state.lastDiscordMessageAt = Date.now();
-    broadcast({ type: "guilds_updated", guilds: state.guilds });
-      payload.keywords.forEach((kw) => pushMessageForKeyword(kw, payload));
-      broadcast(payload);
+    state.lastDiscordMessageAt = Date.now();
+    broadcast({ type: 'guilds_updated', guilds: state.guilds });
+
+    for (const client of wss.clients) {
+      if (client.readyState !== 1) continue;
+      const payload = messageToPayload(message, getClientPersistent(client));
+      if (!payload) continue;
+      client.send(JSON.stringify(payload));
     }
   }
 });

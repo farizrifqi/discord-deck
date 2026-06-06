@@ -466,23 +466,37 @@
       favorites: {},
       hidden: [],
       showHiddenTemporarily: {},
-      showBlockedTemporarily: {}
+      showBlockedTemporarily: {},
+      keywords: [],
+      keywordConfigs: {},
+      blacklistByKeyword: {},
+      configInitialized: false
     };
 
     function loadPrefs() {
       try {
         const raw = localStorage.getItem(PREF_KEY);
         const parsed = raw ? JSON.parse(raw) : {};
+        const hasSavedBrowserConfig = typeof parsed.configInitialized === 'boolean'
+          ? parsed.configInitialized
+          : Object.prototype.hasOwnProperty.call(parsed, 'keywords')
+            || Object.prototype.hasOwnProperty.call(parsed, 'keywordConfigs')
+            || Object.prototype.hasOwnProperty.call(parsed, 'blacklistByKeyword');
+
         return {
           ...DEFAULT_PREFS,
           ...parsed,
           favorites: parsed.favorites && typeof parsed.favorites === 'object' ? parsed.favorites : {},
           hidden: Array.isArray(parsed.hidden) ? parsed.hidden : [],
           showHiddenTemporarily: parsed.showHiddenTemporarily && typeof parsed.showHiddenTemporarily === 'object' ? parsed.showHiddenTemporarily : {},
-          showBlockedTemporarily: parsed.showBlockedTemporarily && typeof parsed.showBlockedTemporarily === 'object' ? parsed.showBlockedTemporarily : {}
+          showBlockedTemporarily: parsed.showBlockedTemporarily && typeof parsed.showBlockedTemporarily === 'object' ? parsed.showBlockedTemporarily : {},
+          keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+          keywordConfigs: parsed.keywordConfigs && typeof parsed.keywordConfigs === 'object' ? parsed.keywordConfigs : {},
+          blacklistByKeyword: parsed.blacklistByKeyword && typeof parsed.blacklistByKeyword === 'object' ? parsed.blacklistByKeyword : {},
+          configInitialized: hasSavedBrowserConfig
         };
       } catch {
-        return { ...DEFAULT_PREFS, favorites: {}, hidden: [], showHiddenTemporarily: {}, showBlockedTemporarily: {} };
+        return { ...DEFAULT_PREFS, favorites: {}, hidden: [], showHiddenTemporarily: {}, showBlockedTemporarily: {}, keywords: [], keywordConfigs: {}, blacklistByKeyword: {}, configInitialized: false };
       }
     }
 
@@ -492,16 +506,45 @@
         favorites,
         hidden: Array.from(hidden),
         showHiddenTemporarily,
-        showBlockedTemporarily
+        showBlockedTemporarily,
+        keywords,
+        keywordConfigs,
+        blacklistByKeyword,
+        configInitialized: true
       }));
     }
 
     const savedPrefs = loadPrefs();
     let MAX_MESSAGES_PER_COLUMN = Number.isFinite(Number(savedPrefs.maxMessagesPerColumn)) ? Number(savedPrefs.maxMessagesPerColumn) : 30;
+    let hasBrowserConfig = !!savedPrefs.configInitialized;
+    keywords = savedPrefs.keywords || [];
+    keywordConfigs = savedPrefs.keywordConfigs || {};
+    blacklistByKeyword = savedPrefs.blacklistByKeyword || {};
     favorites = savedPrefs.favorites;
     hidden = new Set(savedPrefs.hidden);
     showHiddenTemporarily = savedPrefs.showHiddenTemporarily;
     showBlockedTemporarily = savedPrefs.showBlockedTemporarily;
+
+    function getBrowserPersistentState() {
+      return {
+        keywords: keywords || [],
+        keywordConfigs: keywordConfigs || {},
+        blacklistByKeyword: blacklistByKeyword || {}
+      };
+    }
+
+    function syncColumnsToKeywords() {
+      const nextColumns = {};
+      keywords.forEach((kw) => {
+        nextColumns[kw] = Array.isArray(columns[kw]) ? columns[kw] : [];
+      });
+      columns = nextColumns;
+    }
+
+    function syncServerPreferences() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'hydrate', persistent: getBrowserPersistentState() }));
+    }
 
     function connect() {
       const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -510,7 +553,7 @@
       ws.onopen = () => {
         document.getElementById('nav-status').className = 'status-pill connected';
         document.getElementById('nav-status-text').textContent = 'connected';
-        ws.send(JSON.stringify({ type: 'resync' }));
+        syncServerPreferences();
       };
 
       ws.onerror = () => {
@@ -532,21 +575,35 @@
 
     function handleMessage(data) {
       if (data.type === 'init') {
-        keywords = data.keywords || [];
-        keywordConfigs = data.keywordConfigs || {};
-        columns = data.columns || {};
         guilds = data.guilds || {};
-        blacklistByKeyword = data.blacklistByKeyword || {};
-        if (data.persistent) {
-          favorites = data.persistent.favorites || favorites;
-          hidden = new Set(data.persistent.hidden || []);
-          showHiddenTemporarily = data.persistent.showHiddenTemporarily || {};
-          showBlockedTemporarily = data.persistent.showBlockedTemporarily || {};
+
+        if (!hasBrowserConfig) {
+          keywords = data.keywords || [];
+          keywordConfigs = data.keywordConfigs || {};
+          blacklistByKeyword = data.blacklistByKeyword || {};
+          hasBrowserConfig = true;
+        }
+
+        if (data.persistent && typeof data.persistent === 'object') {
+          if (Object.prototype.hasOwnProperty.call(data.persistent, 'favorites')) {
+            favorites = data.persistent.favorites || favorites;
+          }
+          if (Object.prototype.hasOwnProperty.call(data.persistent, 'hidden')) {
+            hidden = new Set(data.persistent.hidden || []);
+          }
+          if (Object.prototype.hasOwnProperty.call(data.persistent, 'showHiddenTemporarily')) {
+            showHiddenTemporarily = data.persistent.showHiddenTemporarily || {};
+          }
+          if (Object.prototype.hasOwnProperty.call(data.persistent, 'showBlockedTemporarily')) {
+            showBlockedTemporarily = data.persistent.showBlockedTemporarily || {};
+          }
           if (Number.isFinite(Number(data.persistent.maxMessagesPerColumn))) {
             MAX_MESSAGES_PER_COLUMN = Number(data.persistent.maxMessagesPerColumn);
           }
-          savePrefs();
         }
+
+        syncColumnsToKeywords();
+        savePrefs();
         renderColumns();
         return;
       }
@@ -554,19 +611,14 @@
         queueMessage(data);
         return;
       }
-      if (data.type === 'keyword_added' || data.type === 'keyword_removed') {
-        if (data.keywords) keywords = data.keywords;
-        if (data.keywordConfigs) keywordConfigs = data.keywordConfigs;
+      if (data.type === 'keyword_added' || data.type === 'keyword_removed' || data.type === 'blacklist_updated') {
+        // Older server broadcasts are ignored for browser-local config.
+        syncColumnsToKeywords();
         renderColumns();
         return;
       }
       if (data.type === 'guilds_updated') {
         guilds = data.guilds || guilds;
-        return;
-      }
-      if (data.type === 'blacklist_updated') {
-        blacklistByKeyword = data.blacklistByKeyword || {};
-        renderColumns();
         return;
       }
     }
@@ -626,6 +678,9 @@
           const i1 = keywords.indexOf(from);
           const i2 = keywords.indexOf(to);
           keywords.splice(i2, 0, keywords.splice(i1, 1)[0]);
+          hasBrowserConfig = true;
+          savePrefs();
+          syncServerPreferences();
           renderColumns();
         }
       });
@@ -732,9 +787,13 @@
     }
 
     function blockUser(kw, user, e) {
-      if (!user?.id) return;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: 'blacklist_user', keyword: kw, user }));
+      if (!user?.id || !kw) return;
+      blacklistByKeyword[kw] = blacklistByKeyword[kw] || {};
+      blacklistByKeyword[kw][user.id] = user;
+      hasBrowserConfig = true;
+      savePrefs();
+      syncServerPreferences();
+      renderColumns();
     }
 
     function copyMessage(btn, msg, e) {
@@ -761,8 +820,14 @@
     function removeKeyword(kw, e) {
       e.stopImmediatePropagation();
       if (!confirm(`Remove "${kw}"?`)) return;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: 'remove_keyword', keyword: kw }));
+      keywords = keywords.filter((item) => item !== kw);
+      delete keywordConfigs[kw];
+      delete blacklistByKeyword[kw];
+      delete columns[kw];
+      hasBrowserConfig = true;
+      savePrefs();
+      syncServerPreferences();
+      renderColumns();
     }
 
     function toggleShowHidden(kw, e) {
@@ -844,13 +909,27 @@
       document.getElementById('confirm-add').onclick = () => {
         const kw = document.getElementById('kw-input').value.trim().toLowerCase();
         if (!kw) return;
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          alert('Not connected to server. Please wait and try again.');
+        if (keywords.includes(kw)) {
+          modal.style.display = 'none';
+          clearInterval(addModalInterval);
+          document.getElementById('kw-input').value = '';
           return;
         }
         const gid = guildSelect.value || null;
         const channels = Array.from(channelList.querySelectorAll('input:checked')).map(el => el.value);
-        ws.send(JSON.stringify({ type: 'add_keyword', keyword: kw, guildId: gid, channels }));
+        keywords.push(kw);
+        keywordConfigs[kw] = {
+          channels,
+          caseSensitive: false,
+          showBlacklisted: false,
+          guildId: gid
+        };
+        blacklistByKeyword[kw] = blacklistByKeyword[kw] || {};
+        columns[kw] = columns[kw] || [];
+        hasBrowserConfig = true;
+        savePrefs();
+        syncServerPreferences();
+        renderColumns();
         modal.style.display = 'none';
         clearInterval(addModalInterval);
         document.getElementById('kw-input').value = '';
@@ -929,6 +1008,7 @@
         clearBtn.textContent = 'Unfavorite All';
         clearBtn.onclick = () => {
           favorites = {};
+          savePrefs();
           modal.style.display = 'none';
           renderColumns();
         };
@@ -939,6 +1019,7 @@
 
     function unfavoriteUser(id, btn) {
       delete favorites[id];
+      savePrefs();
       btn.closest('.user-row').remove();
       renderColumns();
     }
@@ -1002,9 +1083,12 @@
     function unblockUser(kw, userId, btn) {
       const user = blacklistByKeyword[kw]?.[userId];
       if (user) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        ws.send(JSON.stringify({ type: 'unblacklist_user', keyword: kw, user }));
+        delete blacklistByKeyword[kw][userId];
+        hasBrowserConfig = true;
+        savePrefs();
+        syncServerPreferences();
         btn.closest('.user-row').remove();
+        renderColumns();
       }
     }
 
@@ -1023,6 +1107,8 @@
       }
     }, { passive: false });
 
+    syncColumnsToKeywords();
+    renderColumns();
     connect();
   </script>
 </body>
