@@ -29,7 +29,22 @@
     .list::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     .card { background: #1b1f26; border: 1px solid #2a2c32; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; position: relative; }
     .card-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; position: relative; z-index: 10; }
-    .card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; pointer-events: auto; }
+    .card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; pointer-events: auto; transition: all 0.15s ease; }
+    .card-actions button:hover { transform: translateY(-1px); }
+
+    /* Button colors */
+    .btn-fav { background: #854d0e; border-color: #a16207; color: #fef08c; }
+    .btn-fav:hover { background: #a16207; }
+    
+    .btn-hide { background: #374151; border-color: #4b5563; color: #d1d5db; }
+    .btn-hide:hover { background: #4b5563; }
+    
+    .btn-block { background: #7f1d1d; border-color: #991b1b; color: #fecaca; }
+    .btn-block:hover { background: #991b1b; }
+
+    .btn-copy { background: #1e40af; border-color: #1e3a8a; color: #dbeafe; }
+    .btn-copy:hover { background: #1e3a8a; }
+
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 100; }
     .modal.open { display: flex; }
     .modal-content { background: #1a1c20; border: 1px solid #2a2c32; border-radius: 12px; width: 460px; max-height: 80vh; overflow: auto; }
@@ -193,7 +208,6 @@
 
       (columns[kw] || []).forEach(msg => list.appendChild(createMessageCard(msg, kw)));
 
-      // Drag & Drop only on header
       header.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', kw);
       });
@@ -221,10 +235,10 @@
         <div style="margin-top:4px; user-select: text;">${msg.content}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
         <div class="card-actions">
-          <button onclick="toggleFavorite(${JSON.stringify(msg.author)}, event)">★</button>
-          <button onclick="hideMessage('${msg.id}', this, event)">Hide</button>
-          <button onclick="blockUser('${kw}', ${JSON.stringify(msg.author)}, event)">Block</button>
-          <button onclick="copyMessage(this, event)">Copy</button>
+          <button class="btn-fav" onclick="toggleFavorite(${JSON.stringify(msg.author)}, event)">★ Fav</button>
+          <button class="btn-hide" onclick="hideMessage('${msg.id}', this, event)">Hide</button>
+          <button class="btn-block" onclick="blockUser('${kw}', ${JSON.stringify(msg.author)}, event)">Block</button>
+          <button class="btn-copy" onclick="copyMessage(this, event)">Copy</button>
         </div>
       `;
       return card;
@@ -233,7 +247,11 @@
     function toggleFavorite(user, e) {
       e.stopImmediatePropagation();
       if (!user?.id) return;
-      favorites[user.id] ? delete favorites[user.id] : favorites[user.id] = user;
+      if (favorites[user.id]) {
+        delete favorites[user.id];
+      } else {
+        favorites[user.id] = user;
+      }
       renderColumns();
     }
 
