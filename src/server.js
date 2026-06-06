@@ -1,5 +1,4 @@
 require('dotenv').config();
-const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { WebSocketServer } = require('ws');
@@ -13,26 +12,8 @@ const {
 const PORT = Number(process.env.PORT || 2607);
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || '';
 const INITIAL_KEYWORDS = (process.env.KEYWORDS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-const DATA_DIR = path.resolve(__dirname, '..', 'data');
-const PERSIST_PATH = path.join(DATA_DIR, 'settings.json');
 
-const loadPersisted = () => {
-  try {
-    return fs.existsSync(PERSIST_PATH) ? JSON.parse(fs.readFileSync(PERSIST_PATH, 'utf8')) : null;
-  } catch {
-    return null;
-  }
-};
-const savePersisted = () => {
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(PERSIST_PATH, JSON.stringify(getPersistentSnapshot(), null, 2), 'utf8');
-  } catch {}
-};
-
-const persisted = loadPersisted();
-if (persisted) hydratePersistent(persisted);
-else setInitialKeywords(INITIAL_KEYWORDS);
+setInitialKeywords(INITIAL_KEYWORDS);
 
 const app = express();
 app.use(express.json());
@@ -73,7 +54,8 @@ function fullInit() {
     blacklistByKeyword: state.blacklistByKeyword,
     status: state.status,
     tag: state.tag,
-    lastDiscordMessageAt: state.lastDiscordMessageAt
+    lastDiscordMessageAt: state.lastDiscordMessageAt,
+    persistent: getPersistentSnapshot()
   };
 }
 
@@ -119,37 +101,49 @@ wss.on('connection', (ws) => {
 
     if (data.type === 'resync') return ws.send(JSON.stringify(fullInit()));
 
+    if (data.type === 'hydrate') {
+      const hasServerPersistentState =
+        state.keywords.length > 0 ||
+        Object.keys(state.keywordConfigs).length > 0 ||
+        Object.keys(state.blacklistByKeyword).length > 0;
+
+      if (data.persistent && !hasServerPersistentState) {
+        hydratePersistent(data.persistent);
+        broadcast(fullInit());
+        return;
+      }
+
+      ws.send(JSON.stringify(fullInit()));
+      return;
+    }
+
     if (data.type === 'add_keyword') {
       const created = addKeyword(data.keyword || '', data.channels || [], data.guildId || null);
       if (!created) return;
-      savePersisted();
-      return broadcast({ type: 'keyword_added', keyword: created, keywords: state.keywords, keywordConfigs: state.keywordConfigs });
+      return broadcast({ type: 'keyword_added', keyword: created, keywords: state.keywords, keywordConfigs: state.keywordConfigs, persistent: getPersistentSnapshot() });
     }
 
     if (data.type === 'update_keyword_config') {
       const cfg = updateKeywordConfig(data.keyword || '', data.patch || {});
       if (!cfg) return;
-      savePersisted();
-      return broadcast({ type: 'keyword_config_updated', keyword: data.keyword, keywordConfigs: state.keywordConfigs });
+      return broadcast({ type: 'keyword_config_updated', keyword: data.keyword, keywordConfigs: state.keywordConfigs, persistent: getPersistentSnapshot() });
     }
 
     if (data.type === 'remove_keyword') {
       const removed = removeKeyword(data.keyword || '');
       if (!removed) return;
-      savePersisted();
-      return broadcast({ type: 'keyword_removed', keyword: removed, keywords: state.keywords, keywordConfigs: state.keywordConfigs });
+      return broadcast({ type: 'keyword_removed', keyword: removed, keywords: state.keywords, keywordConfigs: state.keywordConfigs, persistent: getPersistentSnapshot() });
     }
 
     if (data.type === 'blacklist_user') {
-      setBlacklistForKeyword(data.keyword || '', data.user, true);
-      savePersisted();
-      return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword });
+      const blocked = data.blocked !== false; // default true, or use flag if provided
+      setBlacklistForKeyword(data.keyword || '', data.user, blocked);
+      return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword, persistent: getPersistentSnapshot() });
     }
 
     if (data.type === 'unblacklist_user') {
       setBlacklistForKeyword(data.keyword || '', data.user, false);
-      savePersisted();
-      return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword });
+      return broadcast({ type: 'blacklist_updated', blacklistByKeyword: state.blacklistByKeyword, persistent: getPersistentSnapshot() });
     }
   });
 });
