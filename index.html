@@ -147,6 +147,7 @@
   <script>
     let ws, keywords = [], keywordConfigs = {}, columns = {}, guilds = {}, blacklistByKeyword = {}, favorites = {}, hidden = new Set();
     let currentBlacklistKw = null;
+    let isHoveringChannelList = false;
 
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -190,7 +191,7 @@
       if (data.type === 'guilds_updated') {
         guilds = data.guilds || guilds;
         const addModal = document.getElementById('add-modal');
-        if (addModal.style.display === 'flex') {
+        if (addModal.style.display === 'flex' && !isHoveringChannelList) {
           refreshAddModalLists();
         }
       }
@@ -269,7 +270,6 @@
         </div>
       `;
 
-      // Attach event listeners
       const favBtn = card.querySelector('.btn-fav');
       const hideBtn = card.querySelector('.btn-hide');
       const blockBtn = card.querySelector('.btn-block');
@@ -351,7 +351,7 @@
       ws.send(JSON.stringify({ type: 'remove_keyword', keyword: kw }));
     }
 
-    // ==================== ADD KEYWORD MODAL ====================
+    // ==================== ADD KEYWORD MODAL (Improved Channel List) ====================
     let addModalInterval = null;
 
     function openAddModal() {
@@ -377,14 +377,16 @@
 
       guildSelect.onchange = updateChannelList;
 
+      // Pause refresh while hovering on channel list
+      channelList.onmouseenter = () => { isHoveringChannelList = true; };
+      channelList.onmouseleave = () => { isHoveringChannelList = false; };
+
       if (addModalInterval) clearInterval(addModalInterval);
       addModalInterval = setInterval(() => {
-        if (modal.style.display === 'flex') {
+        if (modal.style.display === 'flex' && !isHoveringChannelList) {
           refreshAddModalLists();
-        } else {
-          clearInterval(addModalInterval);
         }
-      }, 2000);
+      }, 2500);
 
       document.getElementById('confirm-add').onclick = () => {
         const kw = document.getElementById('kw-input').value.trim().toLowerCase();
@@ -405,9 +407,16 @@
 
     function refreshAddModalLists() {
       const guildSelect = document.getElementById('guild-select');
+      const channelList = document.getElementById('channel-list');
       const currentGuild = guildSelect.value;
-      guildSelect.innerHTML = '';
 
+      // Save current checked state
+      const checkedChannels = new Set();
+      channelList.querySelectorAll('input:checked').forEach(el => {
+        checkedChannels.add(el.value);
+      });
+
+      guildSelect.innerHTML = '';
       Object.values(guilds).forEach(g => {
         const opt = document.createElement('option');
         opt.value = g.id;
@@ -416,10 +425,10 @@
         guildSelect.appendChild(opt);
       });
 
-      updateChannelList();
+      updateChannelList(checkedChannels);
     }
 
-    function updateChannelList() {
+    function updateChannelList(preservedChecked = null) {
       const guildSelect = document.getElementById('guild-select');
       const channelList = document.getElementById('channel-list');
       const gid = guildSelect.value;
@@ -431,7 +440,17 @@
       Object.values(g.channels || {}).forEach(ch => {
         const div = document.createElement('div');
         div.className = 'channel-item';
-        div.innerHTML = `<input type="checkbox" value="${ch.id}" checked> <span>${ch.name}</span>`;
+
+        // Determine if this channel should be checked
+        let isChecked = true;
+        if (preservedChecked !== null) {
+          isChecked = preservedChecked.has(ch.id);
+        }
+
+        div.innerHTML = `
+          <input type="checkbox" value="${ch.id}" ${isChecked ? 'checked' : ''}>
+          <span>${ch.name}</span>
+        `;
         channelList.appendChild(div);
       });
     }
