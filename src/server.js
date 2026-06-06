@@ -122,8 +122,19 @@ wss.on('connection', (ws) => {
     }
 
     if (data.type === 'hydrate') {
-      ws.clientPersistent = createPersistentState(data.persistent || {});
-      return ws.send(JSON.stringify(fullInit(ws)));
+      const hasServerPersistentState =
+        state.keywords.length > 0 ||
+        Object.keys(state.keywordConfigs).length > 0 ||
+        Object.keys(state.blacklistByKeyword).length > 0;
+
+      if (data.persistent && !hasServerPersistentState) {
+        hydratePersistent(data.persistent);
+        broadcast(fullInit());
+        return;
+      }
+
+      ws.send(JSON.stringify(fullInit()));
+      return;
     }
 
     // Legacy global handlers retained for compatibility with older clients.
