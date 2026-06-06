@@ -485,13 +485,17 @@
     }
 
     function savePrefs() {
-      localStorage.setItem(PREF_KEY, JSON.stringify({
-        maxMessagesPerColumn: MAX_MESSAGES_PER_COLUMN,
-        favorites,
-        hidden: Array.from(hidden),
-        showHiddenTemporarily,
-        showBlockedTemporarily
-      }));
+      try {
+        localStorage.setItem(PREF_KEY, JSON.stringify({
+          maxMessagesPerColumn: MAX_MESSAGES_PER_COLUMN,
+          favorites,
+          hidden: Array.from(hidden),
+          showHiddenTemporarily,
+          showBlockedTemporarily
+        }));
+      } catch (err) {
+        console.warn('Failed to persist preferences:', err);
+      }
     }
 
     const savedPrefs = loadPrefs();
