@@ -32,6 +32,30 @@ function defaultConfig(channels = []) {
   return { channels: normalizeChannels(channels), caseSensitive: false, showBlacklisted: false, guildId: null };
 }
 
+function createPersistentState(p = {}) {
+  const keywords = [...new Set((Array.isArray(p.keywords) ? p.keywords : []).map(normalizeKeyword).filter(Boolean))];
+  const keywordConfigs = {};
+  const blacklistByKeyword = {};
+
+  keywords.forEach((kw) => {
+    const cfg = p.keywordConfigs?.[kw] || {};
+    keywordConfigs[kw] = {
+      channels: normalizeChannels(cfg.channels || []),
+      caseSensitive: !!cfg.caseSensitive,
+      showBlacklisted: !!cfg.showBlacklisted,
+      guildId: cfg.guildId || null
+    };
+
+    const bl = p.blacklistByKeyword?.[kw] || {};
+    blacklistByKeyword[kw] = {};
+    Object.keys(bl).forEach((uid) => {
+      blacklistByKeyword[kw][uid] = bl[uid];
+    });
+  });
+
+  return { keywords, keywordConfigs, blacklistByKeyword };
+}
+
 function ensureKeyword(kw) {
   if (!state.columns[kw]) state.columns[kw] = [];
   if (!state.keywordConfigs[kw]) state.keywordConfigs[kw] = defaultConfig();
@@ -103,7 +127,6 @@ function registerChannel(channelId, channelName, guild = null) {
   const id = String(channelId || '').trim();
   if (!id) return null;
 
-  // Register guild if provided
   if (guild) {
     registerGuild(guild);
     if (state.guilds[guild.id]) {
@@ -139,16 +162,24 @@ function keywordHit(content, lower, kw, caseSensitive) {
   });
 }
 
-function getMatchingKeywords(content, channelId, authorId) {
+function getMatchingKeywordsForPersistent(persistent, content, channelId, authorId) {
+  const keywords = Array.isArray(persistent?.keywords) ? persistent.keywords : [];
+  const keywordConfigs = persistent?.keywordConfigs || {};
+  const blacklistByKeyword = persistent?.blacklistByKeyword || {};
   const lower = content.toLowerCase();
-  return state.keywords.filter((kw) => {
-    const cfg = state.keywordConfigs[kw] || defaultConfig();
+
+  return keywords.filter((kw) => {
+    const cfg = keywordConfigs[kw] || defaultConfig();
     const hit = keywordHit(content, lower, kw, cfg.caseSensitive);
     if (!hit) return false;
     if (cfg.channels.length > 0 && !cfg.channels.includes(channelId)) return false;
-    if (!cfg.showBlacklisted && state.blacklistByKeyword[kw]?.[authorId]) return false;
+    if (!cfg.showBlacklisted && blacklistByKeyword[kw]?.[authorId]) return false;
     return true;
   });
+}
+
+function getMatchingKeywords(content, channelId, authorId) {
+  return getMatchingKeywordsForPersistent(state, content, channelId, authorId);
 }
 
 function pushMessageForKeyword(keyword, msg) {
@@ -158,20 +189,14 @@ function pushMessageForKeyword(keyword, msg) {
 }
 
 function hydratePersistent(p = {}) {
-  setInitialKeywords(Array.isArray(p.keywords) ? p.keywords : []);
-
-  for (const kw of state.keywords) {
-    const cfg = p.keywordConfigs?.[kw] || {};
-    state.keywordConfigs[kw] = {
-      channels: normalizeChannels(cfg.channels || []),
-      caseSensitive: !!cfg.caseSensitive,
-      showBlacklisted: !!cfg.showBlacklisted,
-      guildId: cfg.guildId || null
-    };
-    const bl = p.blacklistByKeyword?.[kw] || {};
-    state.blacklistByKeyword[kw] = {};
-    Object.keys(bl).forEach((uid) => { state.blacklistByKeyword[kw][uid] = bl[uid]; });
-  }
+  const persistent = createPersistentState(p);
+  state.keywords = [...persistent.keywords];
+  state.keywordConfigs = clone(persistent.keywordConfigs);
+  state.blacklistByKeyword = clone(persistent.blacklistByKeyword);
+  state.columns = {};
+  state.keywords.forEach((kw) => {
+    if (!state.columns[kw]) state.columns[kw] = [];
+  });
 }
 
 function getPersistentSnapshot() {
@@ -184,6 +209,10 @@ function getPersistentSnapshot() {
 
 module.exports = {
   state,
+  normalizeKeyword,
+  normalizeChannels,
+  defaultConfig,
+  createPersistentState,
   setInitialKeywords,
   addKeyword,
   updateKeywordConfig,
@@ -192,6 +221,7 @@ module.exports = {
   registerGuild,
   registerChannel,
   getMatchingKeywords,
+  getMatchingKeywordsForPersistent,
   pushMessageForKeyword,
   hydratePersistent,
   getPersistentSnapshot
