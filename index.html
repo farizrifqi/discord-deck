@@ -385,10 +385,12 @@
           <label style="font-size:12px;color:#9ca3af">Guild</label>
           <select id="guild-select"></select>
         </div>
+
         <div id="channel-section" style="margin-top:12px">
           <label style="font-size:12px;color:#9ca3af">Channels (multi-select)</label>
           <div id="channel-list" class="channel-list"></div>
         </div>
+
         <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
           <button id="cancel-add" class="btn">Cancel</button>
           <button id="confirm-add" class="btn">Add Keyword</button>
@@ -734,10 +736,10 @@
       guildSelect.innerHTML = '';
       channelList.innerHTML = '';
 
-      Object.values(guilds).forEach(g => {
+      Object.values(guilds).forEach(guild => {
         const opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = g.name;
+        opt.value = guild.id;
+        opt.textContent = guild.name;
         guildSelect.appendChild(opt);
       });
 
