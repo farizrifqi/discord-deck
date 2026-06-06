@@ -200,10 +200,10 @@
         <div style="margin-top:4px">${msg.content}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
         <div class="card-actions">
-          <button onclick="toggleFavorite(${JSON.stringify(msg.author)})">★ Fav</button>
-          <button onclick="hideMessage('${msg.id}', this)">Hide</button>
-          <button onclick="blockUser('${kw}', ${JSON.stringify(msg.author)})">Block</button>
-          <button onclick="copyMessage('${msg.id}', this)">Copy</button>
+          <button onclick="toggleFavorite(${JSON.stringify(msg.author)})">⭐ Fav</button>
+          <button onclick="hideMessage('${msg.id}', this)">🙈 Hide</button>
+          <button onclick="blockUser('${kw}', ${JSON.stringify(msg.author)})">🚫 Block</button>
+          <button onclick="copyMessage('${msg.id}', this)">📋 Copy</button>
         </div>
       `;
       return card;
