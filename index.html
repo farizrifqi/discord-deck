@@ -320,7 +320,11 @@
       if (isHidden && showHiddenTemporarily[kw]) card.classList.add('hidden');
 
       card.innerHTML = `
-        <div><strong>${msg.author?.displayName || msg.author?.username}</strong> <span style="color:#9ca3af;font-size:11px;">${time}</span></div>
+  const contentDiv = document.createElement('div');
+  contentDiv.style.cssText = 'margin-top:4px; user-select: text;';
+  contentDiv.textContent = msg.content || '';
+  card.appendChild(contentDiv);
+  // Do the same for the author line instead of template interpolation
         <div style="margin-top:4px; user-select: text;">${msg.content}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
         <div class="card-actions">
