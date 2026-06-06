@@ -503,12 +503,19 @@
 
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}`);
+      const envUrl = window.__WS_URL__ || localStorage.getItem('wsUrl') || '';
+      const socketUrl = envUrl || (location.host ? `${protocol}//${location.host}` : 'ws://localhost:2607');
+      ws = new WebSocket(socketUrl);
 
       ws.onopen = () => {
         document.getElementById('nav-status').className = 'status-pill connected';
         document.getElementById('nav-status-text').textContent = 'connected';
         ws.send(JSON.stringify({ type: 'resync' }));
+      };
+
+      ws.onerror = () => {
+        document.getElementById('nav-status').className = 'status-pill error';
+        document.getElementById('nav-status-text').textContent = 'connection error';
       };
 
       ws.onclose = () => {
