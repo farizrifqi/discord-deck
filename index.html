@@ -308,7 +308,7 @@
 
     // Event bindings
     document.getElementById('add').onclick = openAddModal;
-    document.getElementById('btn-blacklist').onclick = () => alert('Blacklist modal');
+    document.getElementById('btn-blacklist').onclick = openBlacklistModal;
     document.getElementById('btn-favorites').onclick = () => alert('Favorites modal');
     document.getElementById('btn-clear-hidden').onclick = () => { hidden.clear(); renderColumns(); };
 
