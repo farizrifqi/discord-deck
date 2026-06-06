@@ -251,8 +251,10 @@
     }
 
     /* Colored Action Buttons */
-    .btn-fav { background: #c2410c; border-color: #9a3412; color: #fed7aa; }
-    .btn-fav:hover { background: #9a3412; }
+    .btn-fav { background: #92400e; border-color: #78350f; color: #fde68a; }
+    .btn-fav:hover { background: #78350f; }
+    
+    .btn-fav.active { background: #d97706; border-color: #b45309; color: #fef3c7; }
     
     .btn-hide { background: #374151; border-color: #4b5563; color: #d1d5db; }
     .btn-hide:hover { background: #4b5563; }
@@ -262,6 +264,9 @@
     
     .btn-copy { background: #1e40af; border-color: #1e3a8a; color: #dbeafe; }
     .btn-copy:hover { background: #1e3a8a; }
+    
+    .btn-open { background: #065f46; border-color: #064e3b; color: #d1fae5; }
+    .btn-open:hover { background: #064e3b; }
 
     .modal { 
       position: fixed; 
@@ -449,10 +454,8 @@
   </div>
 
   <script>
-    // Default max messages per column
-    let MAX_MESSAGES_PER_COLUMN = localStorage.getItem('maxMessagesPerColumn') 
-      ? parseInt(localStorage.getItem('maxMessagesPerColumn')) 
-      : 30;
+    // MAX_MESSAGES_PER_COLUMN is initialized from prefs below (single source of truth)
+    let MAX_MESSAGES_PER_COLUMN = 30;
 
     let ws, keywords = [], keywordConfigs = {}, columns = {}, guilds = {}, blacklistByKeyword = {}, favorites = {}, hidden = new Set();
     let showHiddenTemporarily = {};
@@ -502,7 +505,8 @@
     showBlockedTemporarily = savedPrefs.showBlockedTemporarily;
 
     function connect() {
-      ws = new WebSocket('ws://localhost:2607');
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${wsProtocol}//${location.host}`);
 
       ws.onopen = () => {
         document.getElementById('nav-status').className = 'status-pill connected';
@@ -667,10 +671,11 @@
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'card-actions';
       actionsDiv.innerHTML = `
-        <button class="btn-fav">★ Fav</button>
+        <button class="btn-fav${isFavorited ? ' active' : ''}">★ Fav</button>
         <button class="btn-hide">Hide</button>
         <button class="btn-block">Block</button>
         <button class="btn-copy">Copy</button>
+        <button class="btn-open">Open</button>
       `;
 
       card.appendChild(authorDiv);
@@ -697,7 +702,14 @@
 
       actionsDiv.querySelector('.btn-copy').onclick = (e) => {
         e.stopImmediatePropagation();
-        copyMessage(actionsDiv.querySelector('.btn-copy'), e);
+        copyMessage(actionsDiv.querySelector('.btn-copy'), msg, e);
+      };
+
+      actionsDiv.querySelector('.btn-open').onclick = (e) => {
+        e.stopImmediatePropagation();
+        if (msg.messageUrl) {
+          window.open(msg.messageUrl, '_blank', 'noopener,noreferrer');
+        }
       };
 
       return card;
@@ -722,14 +734,19 @@
 
     function blockUser(kw, user, e) {
       if (!user?.id) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       ws.send(JSON.stringify({ type: 'blacklist_user', keyword: kw, user }));
     }
 
-    function copyMessage(btn, e) {
-      const text = btn.closest('.card').innerText;
-      navigator.clipboard.writeText(text);
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 1000);
+    function copyMessage(btn, msg, e) {
+      const text = msg.content || '';
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      }).catch(() => {
+        btn.textContent = 'Failed';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
     }
 
     function queueMessage(msg) {
@@ -745,6 +762,7 @@
     function removeKeyword(kw, e) {
       e.stopImmediatePropagation();
       if (!confirm(`Remove "${kw}"?`)) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       ws.send(JSON.stringify({ type: 'remove_keyword', keyword: kw }));
     }
 
@@ -774,7 +792,6 @@
         const newValue = parseInt(input.value);
         if (newValue >= 5 && newValue <= 100) {
           MAX_MESSAGES_PER_COLUMN = newValue;
-          localStorage.setItem('maxMessagesPerColumn', MAX_MESSAGES_PER_COLUMN);
           savePrefs();
           modal.style.display = 'none';
           renderColumns();
@@ -828,6 +845,10 @@
       document.getElementById('confirm-add').onclick = () => {
         const kw = document.getElementById('kw-input').value.trim().toLowerCase();
         if (!kw) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          alert('Not connected to server. Please wait and try again.');
+          return;
+        }
         const gid = guildSelect.value || null;
         const channels = Array.from(channelList.querySelectorAll('input:checked')).map(el => el.value);
         ws.send(JSON.stringify({ type: 'add_keyword', keyword: kw, guildId: gid, channels }));
@@ -982,7 +1003,8 @@
     function unblockUser(kw, userId, btn) {
       const user = blacklistByKeyword[kw]?.[userId];
       if (user) {
-        ws.send(JSON.stringify({ type: 'blacklist_user', keyword: kw, user, blocked: false }));
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: 'unblacklist_user', keyword: kw, user }));
         btn.closest('.user-row').remove();
       }
     }
