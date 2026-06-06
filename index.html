@@ -37,7 +37,11 @@
     .modal-content { background: #1a1c20; border: 1px solid #2a2c32; border-radius: 12px; width: 440px; max-height: 80vh; overflow: auto; }
     .modal-header { padding: 14px 18px; border-bottom: 1px solid #2a2c32; font-weight: 600; }
     .modal-body { padding: 16px; }
-    select, input { width: 100%; padding: 8px; background: #0f1318; border: 1px solid #2a2c32; color: #e5e7eb; border-radius: 6px; margin-bottom: 10px; }
+    select, input { width: 100%; padding: 8px; background: #0f1318; border: 1px solid #2a2c32; color: #e5e7eb; border-radius: 6px; margin-bottom: 10px; transition: border-color 0.15s ease; }
+    select:focus, input:focus { outline: none; border-color: #3b82f6; }
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .channel-list { max-height: 180px; overflow-y: auto; border: 1px solid #2a2c32; border-radius: 6px; padding: 8px; background: #0f1318; }
     .channel-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
   </style>
