@@ -75,10 +75,29 @@
     .list::-webkit-scrollbar { width: 6px; }
     .list::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     
-    .card { background: #1b1f26; border: 1px solid #2a2c32; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; position: relative; }
+    .card { 
+      background: #1b1f26; 
+      border: 1px solid #2a2c32; 
+      border-radius: 8px; 
+      padding: 10px; 
+      margin-bottom: 8px; 
+      font-size: 13px; 
+      position: relative;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
     .card.favorited { border-color: #facc15; box-shadow: 0 0 0 1px #facc15; }
     .card.blocked { border-color: #ef4444; box-shadow: 0 0 0 1px #ef4444; }
     .card.hidden { border-color: #f87171; box-shadow: 0 0 0 1px #f87171; }
+    
+    .card-content {
+      margin-top: 4px;
+      user-select: text;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
     
     .card-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; position: relative; z-index: 10; }
     .card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid #2a2c32; background: #1a1c20; color: #e5e7eb; pointer-events: auto; transition: all 0.15s ease; }
@@ -131,7 +150,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <span>Add Keyword</span>
-<button onclick="document.getElementById('add-modal').style.display='none'; if (addModalInterval) { clearInterval(addModalInterval); addModalInterval = null; }" class="btn" style="padding:2px 8px">×</button>
+        <button onclick="document.getElementById('add-modal').style.display='none'" class="btn" style="padding:2px 8px">×</button>
       </div>
       <div class="modal-body">
         <input id="kw-input" placeholder="Keyword" />
@@ -250,20 +269,17 @@
 
       col.innerHTML = `
         <div class="colh" draggable="true">
-          <!-- Top row: Title + Count + Close -->
           <div class="colh-top">
             <div class="title">${kw}</div>
             <div class="count">${(columns[kw] || []).length}/30</div>
             <button class="btn close-btn" onclick="removeKeyword('${kw}', event)">×</button>
           </div>
           
-          <!-- Bottom row: Toggle buttons -->
           <div class="col-options">
             <button class="btn" onclick="toggleShowHidden('${kw}', event)">${showHiddenText}</button>
             <button class="btn" onclick="toggleShowBlocked('${kw}', event)">${showBlockedText}</button>
           </div>
         </div>
-        
         <div class="list"></div>
       `;
 
@@ -319,47 +335,56 @@
       if (isBlocked && showBlockedTemporarily[kw]) card.classList.add('blocked');
       if (isHidden && showHiddenTemporarily[kw]) card.classList.add('hidden');
 
-      card.innerHTML = `
-  const contentDiv = document.createElement('div');
-  contentDiv.style.cssText = 'margin-top:4px; user-select: text;';
-  contentDiv.textContent = msg.content || '';
-  card.appendChild(contentDiv);
-  // Do the same for the author line instead of template interpolation
-        <div style="margin-top:4px; user-select: text;">${msg.content}</div>
-        <div style="font-size:11px;color:#9ca3af;margin-top:6px">${msg.guild?.name || ''} • ${msg.channel?.name || ''}</div>
-        <div class="card-actions">
-          <button class="btn-fav" data-action="fav">★ Fav</button>
-          <button class="btn-hide" data-action="hide">Hide</button>
-          <button class="btn-block" data-action="block">Block</button>
-          <button class="btn-copy" data-action="copy">Copy</button>
-        </div>
+      // Author line
+      const authorDiv = document.createElement('div');
+      authorDiv.innerHTML = `<strong>${msg.author?.displayName || msg.author?.username}</strong> <span style="color:#9ca3af;font-size:11px;">${time}</span>`;
+
+      // Content line
+      const contentDiv = document.createElement('div');
+      contentDiv.style.cssText = 'margin-top:4px; user-select: text; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap;';
+      contentDiv.textContent = msg.content || '';
+
+      // Channel/Guild line
+      const metaDiv = document.createElement('div');
+      metaDiv.style.cssText = 'font-size:11px;color:#9ca3af;margin-top:6px';
+      metaDiv.textContent = `${msg.guild?.name || ''} • ${msg.channel?.name || ''}`;
+
+      // Actions
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'card-actions';
+      actionsDiv.innerHTML = `
+        <button class="btn-fav">★ Fav</button>
+        <button class="btn-hide">Hide</button>
+        <button class="btn-block">Block</button>
+        <button class="btn-copy">Copy</button>
       `;
 
-      const favBtn = card.querySelector('.btn-fav');
-      const hideBtn = card.querySelector('.btn-hide');
-      const blockBtn = card.querySelector('.btn-block');
-      const copyBtn = card.querySelector('.btn-copy');
+      card.appendChild(authorDiv);
+      card.appendChild(contentDiv);
+      card.appendChild(metaDiv);
+      card.appendChild(actionsDiv);
 
-      favBtn.onclick = (e) => {
+      // Attach events
+      actionsDiv.querySelector('.btn-fav').onclick = (e) => {
         e.stopImmediatePropagation();
         const author = { id: msg.author.id, username: msg.author.username, displayName: msg.author.displayName };
         toggleFavorite(author, e);
       };
 
-      hideBtn.onclick = (e) => {
+      actionsDiv.querySelector('.btn-hide').onclick = (e) => {
         e.stopImmediatePropagation();
-        hideMessage(msg.id, hideBtn, e);
+        hideMessage(msg.id, actionsDiv.querySelector('.btn-hide'), e);
       };
 
-      blockBtn.onclick = (e) => {
+      actionsDiv.querySelector('.btn-block').onclick = (e) => {
         e.stopImmediatePropagation();
         const author = { id: msg.author.id, username: msg.author.username, displayName: msg.author.displayName };
         blockUser(kw, author, e);
       };
 
-      copyBtn.onclick = (e) => {
+      actionsDiv.querySelector('.btn-copy').onclick = (e) => {
         e.stopImmediatePropagation();
-        copyMessage(copyBtn, e);
+        copyMessage(actionsDiv.querySelector('.btn-copy'), e);
       };
 
       return card;
