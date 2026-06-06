@@ -502,10 +502,7 @@
     showBlockedTemporarily = savedPrefs.showBlockedTemporarily;
 
     function connect() {
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const envUrl = window.__WS_URL__ || localStorage.getItem('wsUrl') || '';
-      const socketUrl = envUrl || (location.host ? `${protocol}//${location.host}` : 'ws://localhost:2607');
-      ws = new WebSocket(socketUrl);
+      ws = new WebSocket('ws://localhost:2607');
 
       ws.onopen = () => {
         document.getElementById('nav-status').className = 'status-pill connected';
